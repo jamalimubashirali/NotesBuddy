@@ -9,7 +9,7 @@ from app.core.config import settings
 from app.models.user_pref_model import UserCreate, UserResponse, UserLogin, Token, TokenData
 from app.services.user_service import UserService
 
-router = APIRouter(prefix="/auth", tags=["Authentication"])
+router = APIRouter()
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)

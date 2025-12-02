@@ -4,10 +4,7 @@ from app.core.config import settings
 from app.core.database import create_tables
 from app.api.v1 import api_router
 
-# Create database tables
-create_tables()
-
-# Create FastAPI application
+# FastAPI application creation
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
@@ -15,10 +12,16 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
-# Configure CORS
+# Startup event to create tables only once
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database tables on startup."""
+    create_tables()
+
+# Cors Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # React dev servers
+    allow_origins=["http://localhost:5173"],  # React dev servers (no trailing slash)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -40,4 +43,3 @@ async def root():
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy", "service": settings.PROJECT_NAME}
-

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { InputSection } from './components/InputSection';
 import { NotesDisplay } from './components/NotesDisplay';
 import { HowItWorks } from './pages/HowItWorks';
@@ -14,7 +14,18 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [notes, setNotes] = useState<string>('');
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, authLoading, navigate]);
+
+  if (authLoading) {
+    return <div className="flex justify-center items-center h-64">Loading...</div>;
+  }
 
   const handleGenerateNotes = async (url: string) => {
     if (!isAuthenticated) {
