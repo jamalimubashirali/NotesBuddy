@@ -56,5 +56,3 @@ npm install
     ```
 3.  Open `http://localhost:5173` in your browser.
 
-## 📄 License
-MIT
