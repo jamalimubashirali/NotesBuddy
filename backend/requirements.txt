@@ -1,0 +1,25 @@
+# API and Core Backend Requirements
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+
+# Database Drivers
+psycopg2-binary  # PostgreSQL
+
+# Authentication
+python-jose
+passlib[bcrypt]
+
+# Environment Management
+python-dotenv
+
+# Generative AI
+langchain
+langchain-openai
+langchain-core
+
+# YouTube
+youtube-transcript-api
+
+
