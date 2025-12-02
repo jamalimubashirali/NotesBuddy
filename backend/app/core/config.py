@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     DESCRIPTION: str = "AI-powered note-taking and content summarization platform"
     
     # Database Configuration
-    DATABASE_URL: Optional[str] = None
+    DATABASE_URL: Optional[str] = os.getenv("DATABASE_URI") 
     
     # Security Configuration
     SECRET_KEY: str = "your-secret-key-change-in-production"

@@ -3,13 +3,18 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 from app.models.user_pref_model import Base
 
-# For development, we'll use SQLite
-SQLITE_DATABASE_URL = "sqlite:///./notebuddy.db"
+# Use DATABASE_URL from settings, fallback to SQLite if not set
+SQLALCHEMY_DATABASE_URL = settings.DATABASE_URL or "sqlite:///./notebuddy.db"
 
 # Create SQLAlchemy engine
+if "sqlite" in SQLALCHEMY_DATABASE_URL:
+    connect_args = {"check_same_thread": False}
+else:
+    connect_args = {}
+
 engine = create_engine(
-    SQLITE_DATABASE_URL, 
-    connect_args={"check_same_thread": False}  # Needed for SQLite
+    SQLALCHEMY_DATABASE_URL, 
+    connect_args=connect_args
 )
 
 # Create SessionLocal class

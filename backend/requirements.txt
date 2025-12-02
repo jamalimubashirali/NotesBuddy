@@ -23,3 +23,6 @@ langchain-core
 youtube-transcript-api
 
 
+# Export
+markdown2
+xhtml2pdf

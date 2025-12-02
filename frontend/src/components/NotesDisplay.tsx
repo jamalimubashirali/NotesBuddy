@@ -1,13 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Copy, Check, Download } from 'lucide-react';
+import { Copy, Check, Download, FileText, File } from 'lucide-react';
+import { exportToPDF } from '../services/api';
+import { toast } from 'react-hot-toast';
 
 interface NotesDisplayProps {
     notes: string;
 }
 
 export const NotesDisplay: React.FC<NotesDisplayProps> = ({ notes }) => {
-    const [copied, setCopied] = React.useState(false);
+    const [copied, setCopied] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
+    const [showExportMenu, setShowExportMenu] = useState(false);
 
     const handleCopy = () => {
         navigator.clipboard.writeText(notes);
@@ -15,14 +19,37 @@ export const NotesDisplay: React.FC<NotesDisplayProps> = ({ notes }) => {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const handleDownload = () => {
+    const handleDownloadMarkdown = () => {
         const element = document.createElement("a");
         const file = new Blob([notes], { type: 'text/markdown' });
         element.href = URL.createObjectURL(file);
         element.download = "notes.md";
-        document.body.appendChild(element); // Required for this to work in FireFox
+        document.body.appendChild(element);
         element.click();
         document.body.removeChild(element);
+        setShowExportMenu(false);
+        toast.success('Downloaded as Markdown');
+    };
+
+    const handleDownloadPDF = async () => {
+        setIsExporting(true);
+        try {
+            const blob = await exportToPDF(notes);
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'notes.pdf');
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode?.removeChild(link);
+            toast.success('Downloaded as PDF');
+        } catch (error) {
+            console.error('PDF Export failed:', error);
+            toast.error('Failed to export PDF');
+        } finally {
+            setIsExporting(false);
+            setShowExportMenu(false);
+        }
     };
 
     if (!notes) return null;
@@ -35,15 +62,39 @@ export const NotesDisplay: React.FC<NotesDisplayProps> = ({ notes }) => {
                         <span className="w-2 h-6 bg-blue-600 rounded-full"></span>
                         Generated Notes
                     </h2>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={handleDownload}
-                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600 transition-colors"
-                            title="Download as Markdown"
-                        >
-                            <Download className="w-4 h-4" />
-                            <span className="hidden sm:inline">Download</span>
-                        </button>
+                    <div className="flex gap-2 relative">
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowExportMenu(!showExportMenu)}
+                                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600 transition-colors"
+                            >
+                                <Download className="w-4 h-4" />
+                                <span className="hidden sm:inline">Export</span>
+                            </button>
+
+                            {showExportMenu && (
+                                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-10 border border-gray-100 dark:border-gray-700">
+                                    <div className="py-1">
+                                        <button
+                                            onClick={handleDownloadMarkdown}
+                                            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        >
+                                            <FileText className="w-4 h-4" />
+                                            Markdown (.md)
+                                        </button>
+                                        <button
+                                            onClick={handleDownloadPDF}
+                                            disabled={isExporting}
+                                            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+                                        >
+                                            <File className="w-4 h-4" />
+                                            {isExporting ? 'Generating PDF...' : 'PDF (.pdf)'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         <button
                             onClick={handleCopy}
                             className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
