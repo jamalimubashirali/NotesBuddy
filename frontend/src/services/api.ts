@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000/api/v1';
+const API_URL = 'http://127.0.0.1:8000/api/v1';
 
 // Add interceptor to include token in requests
 axios.interceptors.request.use((config) => {
@@ -14,10 +14,16 @@ axios.interceptors.request.use((config) => {
 export interface NoteResponse {
   video_id: string;
   notes: string;
+  language: string;
+  style: string;
 }
 
-export const generateNotes = async (url: string): Promise<NoteResponse> => {
-  const response = await axios.post(`${API_URL}/notes/generate`, { url });
+export const generateNotes = async (url: string, language: string = 'en', style: string = 'detailed'): Promise<NoteResponse> => {
+  const response = await axios.post(`${API_URL}/notes/generate`, {
+    url,
+    language,
+    style
+  });
   return response.data;
 };
 

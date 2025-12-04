@@ -52,14 +52,25 @@ class LLMService:
             Transcript:
             {transcript}
             
-            Please generate notes in Markdown format with the following structure:
+            Please generate notes in {language} language with a "{style}" style.
+            
+            If style is "detailed":
+            - Provide comprehensive explanations.
+            - Include examples if available.
+            
+            If style is "summary":
+            - Provide a concise overview.
+            - Focus on main points only.
+            
+            If style is "bullet points":
+            - Use bullet points for almost everything.
+            - Keep it structured and easy to scan.
+            
+            Structure the notes as follows:
             # Title
             ## Summary
             ## Key Concepts
-            - Concept 1
-            - Concept 2
             ## Detailed Notes
-            (Bulleted list or paragraphs)
             ## Conclusion
             """
         )
@@ -81,8 +92,10 @@ class LLMService:
             | branch
         )
 
-    async def generate_notes(self, transcript: str) -> str:
-        try:
-            return await self.chain.ainvoke({"transcript": transcript})
-        except Exception as e:
-            return f"Error generating notes: {str(e)}"
+    async def generate_notes(self, transcript: str, language: str = "en", style: str = "detailed") -> str:
+        # Let exceptions propagate to the controller for proper error handling
+        return await self.chain.ainvoke({
+            "transcript": transcript,
+            "language": language,
+            "style": style
+        })

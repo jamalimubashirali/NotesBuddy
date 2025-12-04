@@ -27,7 +27,7 @@ function Home() {
     return <div className="flex justify-center items-center h-64">Loading...</div>;
   }
 
-  const handleGenerateNotes = async (url: string) => {
+  const handleGenerateNotes = async (url: string, language: string, style: string) => {
     if (!isAuthenticated) {
       toast.error('Please login to generate notes');
       return;
@@ -35,7 +35,7 @@ function Home() {
     setIsLoading(true);
     setNotes('');
     try {
-      const response = await generateNotes(url);
+      const response = await generateNotes(url, language, style);
       setNotes(response.notes);
       toast.success('Notes generated successfully!');
     } catch (error: any) {

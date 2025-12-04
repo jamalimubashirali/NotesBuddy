@@ -1,5 +1,9 @@
 from pydantic_settings import BaseSettings
 from typing import Optional
+import os
+import dotenv
+
+dotenv.load_dotenv()
 
 
 class Settings(BaseSettings):
@@ -26,10 +30,10 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     # Azure OpenAI
-    AZURE_OPENAI_API_KEY: Optional[str] = None
-    AZURE_OPENAI_ENDPOINT: Optional[str] = None
-    AZURE_OPENAI_API_VERSION: Optional[str] = None
-    AZURE_OPENAI_DEPLOYMENT_NAME: Optional[str] = None
+    AZURE_OPENAI_API_KEY: Optional[str] = os.getenv("AZURE_OPENAI_API_KEY")
+    AZURE_OPENAI_ENDPOINT: Optional[str] = os.getenv("AZURE_OPENAI_ENDPOINT")
+    AZURE_OPENAI_API_VERSION: Optional[str] = os.getenv("AZURE_OPENAI_API_VERSION")
+    AZURE_OPENAI_DEPLOYMENT_NAME: Optional[str] = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME")
     
     @property
     def DATABASE_URL(self) -> Optional[str]:
