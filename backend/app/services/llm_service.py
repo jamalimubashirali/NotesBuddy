@@ -1,5 +1,5 @@
 import os
-from langchain_openai import AzureChatOpenAI
+from langchain_openai import ChatOpenAI
 from langchain_core.runnables import RunnableBranch, RunnablePassthrough, RunnableLambda
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
@@ -7,20 +7,18 @@ from app.core.config import settings
 
 class LLMService:
     def __init__(self):
-        # Azure OpenAI Configuration
-        self.api_key = settings.AZURE_OPENAI_API_KEY
-        self.azure_endpoint = settings.AZURE_OPENAI_ENDPOINT
-        self.api_version = settings.AZURE_OPENAI_API_VERSION
-        self.deployment_name = settings.AZURE_OPENAI_DEPLOYMENT_NAME
+        # OpenRouter Configuration
+        self.api_key = settings.OPENROUTER_API_KEY
+        self.model = settings.OPENROUTER_MODEL
+        self.base_url = "https://openrouter.ai/api/v1"
 
-        if not all([self.api_key, self.azure_endpoint, self.api_version, self.deployment_name]):
-            print("WARNING: Azure OpenAI environment variables are missing. LLM service might fail.")
+        if not self.api_key:
+            print("WARNING: OPENROUTER_API_KEY is missing. LLM service might fail.")
         
-        self.llm = AzureChatOpenAI(
-            azure_deployment=self.deployment_name,
-            openai_api_version=self.api_version,
-            api_key=self.api_key,
-            azure_endpoint=self.azure_endpoint,
+        self.llm = ChatOpenAI(
+            model=self.model,
+            openai_api_key=self.api_key,
+            openai_api_base=self.base_url,
             temperature=0.7
         )
         
@@ -88,7 +86,7 @@ class LLMService:
         # 4. Final Chain
         # We need to pass the transcript to both classifier and the branch
         self.chain = (
-            {"transcript": RunnablePassthrough(), "classification": classifier_chain}
+            RunnablePassthrough.assign(classification=classifier_chain)
             | branch
         )
 
