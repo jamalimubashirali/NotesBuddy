@@ -24,6 +24,8 @@ const Dashboard: React.FC = () => {
         fetchNotes();
     }, []);
 
+    console.log(notes);
+
     if (loading) return <div className="text-center mt-10 text-white">Loading notes...</div>;
     if (error) return <div className="text-center mt-10 text-red-500">{error}</div>;
 

@@ -38,7 +38,10 @@ class NoteRequest(BaseModel):
     style: str = "detailed"
 
 class NoteResponse(BaseModel):
+    id: int
     video_id: str
+    title: str
     notes: str
     language: str
     style: str
+    created_at: datetime
