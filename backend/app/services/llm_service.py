@@ -90,8 +90,53 @@ class LLMService:
             | branch
         )
 
+    def check_transcript_length(self, transcript: str) -> None:
+        # Approx 4 chars per token. Limit to ~30k tokens for safety
+        if len(transcript) > 120000:
+            raise ValueError("Transcript is too long (approx > 30k tokens). Please use a shorter video.")
+
+    async def chat_with_note(self, note_id: int, note_content: str, user_message: str):
+        """Chat with a note using RAG to retrieve relevant context."""
+        from app.services.vector_service import VectorService
+        
+        vector_service = VectorService()
+        
+        # Retrieve relevant chunks from the note
+        relevant_chunks = vector_service.retrieve_relevant_chunks(note_id, user_message, n_results=3)
+        
+        # Build context from relevant chunks
+        if relevant_chunks:
+            context = "\n\n".join([f"Relevant excerpt {i+1}:\n{chunk}" for i, (chunk, score) in enumerate(relevant_chunks)])
+        else:
+            # Fallback to full note if no chunks found (first time)
+            context = note_content
+        
+        prompt = ChatPromptTemplate.from_template(
+            """You are a helpful assistant. You have access to the following notes:
+            
+{context}
+
+User Question: {user_message}
+
+Answer the question based on the notes provided. Be concise and specific."""
+        )
+        
+        chain = prompt | self.llm | StrOutputParser()
+        
+        async for chunk in chain.astream({"context": context, "user_message": user_message}):
+            yield chunk
+
+    async def generate_notes_stream(self, transcript: str, language: str = "en", style: str = "detailed"):
+        self.check_transcript_length(transcript)
+        async for chunk in self.chain.astream({
+            "transcript": transcript,
+            "language": language,
+            "style": style
+        }):
+            yield chunk
+
     async def generate_notes(self, transcript: str, language: str = "en", style: str = "detailed") -> str:
-        # Let exceptions propagate to the controller for proper error handling
+        self.check_transcript_length(transcript)
         return await self.chain.ainvoke({
             "transcript": transcript,
             "language": language,

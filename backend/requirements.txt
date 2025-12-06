@@ -26,3 +26,8 @@ youtube-transcript-api
 # Export
 markdown2
 xhtml2pdf
+
+# RAG and Vector Database
+chromadb
+langchain-community
+sentence-transformers

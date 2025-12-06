@@ -7,7 +7,9 @@ from fastapi import HTTPException, status, Depends
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.core.config import settings
-from app.models.user_pref_model import TokenData
+from app.models.user_pref_model import TokenData, User
+from sqlalchemy.orm import Session
+from app.core.database import get_db
 
 import bcrypt
 
@@ -58,3 +60,18 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) 
         raise credentials_exception
     
     return token_data
+
+def get_current_user(
+    token_data: TokenData = Depends(verify_token),
+    db: Session = Depends(get_db)
+) -> User:
+    """Get current user from token."""
+    from app.services.user_service import UserService
+    user = UserService.get_user_by_email(db, email=token_data.email)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user

@@ -11,19 +11,44 @@ axios.interceptors.request.use((config) => {
   return config;
 });
 
+// Add interceptor to handle 401 errors
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
 export interface NoteResponse {
+  id: number;
   video_id: string;
+  title: string;
   notes: string;
   language: string;
   style: string;
+  created_at: string;
 }
 
 export const generateNotes = async (url: string, language: string = 'en', style: string = 'detailed'): Promise<NoteResponse> => {
-  const response = await axios.post(`${API_URL}/notes/generate`, {
+  const response = await axios.post<NoteResponse>(`${API_URL}/notes/generate`, {
     url,
     language,
     style
   });
+  return response.data;
+};
+
+export const getNotes = async (): Promise<NoteResponse[]> => {
+  const response = await axios.get<NoteResponse[]>(`${API_URL}/notes/`);
+  return response.data;
+};
+
+export const getNoteById = async (id: number): Promise<NoteResponse> => {
+  const response = await axios.get<NoteResponse>(`${API_URL}/notes/${id}`);
   return response.data;
 };
 
@@ -35,11 +60,6 @@ export const exportToPDF = async (notes: string): Promise<Blob> => {
 };
 
 export const login = async (data: any) => {
-  const formData = new URLSearchParams();
-  formData.append('username', data.email); // OAuth2PasswordRequestForm expects 'username'
-  formData.append('password', data.password);
-
-  // We need to send as form data for OAuth2PasswordRequestForm
   const response = await axios.post(`${API_URL}/auth/login`, {
     email: data.email,
     password: data.password
@@ -50,4 +70,27 @@ export const login = async (data: any) => {
 export const register = async (data: any) => {
   const response = await axios.post(`${API_URL}/auth/register`, data);
   return response.data;
+};
+
+export const chatWithNote = async (noteId: number, message: string): Promise<ReadableStream<Uint8Array>> => {
+  const response = await fetch(`${API_URL}/notes/${noteId}/chat`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    },
+    body: JSON.stringify({ message })
+  });
+
+  if (response.status === 401) {
+    localStorage.removeItem('token');
+    window.location.href = '/login';
+    throw new Error('Unauthorized');
+  }
+
+  if (!response.body) {
+    throw new Error('No response body');
+  }
+
+  return response.body;
 };

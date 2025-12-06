@@ -1,6 +1,6 @@
 from pydantic import BaseModel, HttpUrl
 from app.core.database import Base
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from datetime import datetime
 
 class Notes(Base):
@@ -12,6 +12,7 @@ class Notes(Base):
     notes = Column(String, nullable=False)
     language = Column(String, default="en")
     style = Column(String, default="detailed")
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

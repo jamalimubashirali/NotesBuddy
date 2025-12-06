@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { InputSection } from './components/InputSection';
 import { NotesDisplay } from './components/NotesDisplay';
@@ -6,14 +6,15 @@ import { HowItWorks } from './pages/HowItWorks';
 import { Features } from './pages/Features';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
-import { generateNotes } from './services/api';
-import { Toaster, toast } from 'react-hot-toast';
+import { Toaster } from 'react-hot-toast';
 import { BookOpen, Github, LogIn, UserPlus, LogOut } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import Dashboard from './components/Dashboard';
+import NoteView from './components/NoteView';
+import { useNoteGenerator } from './hooks/useNoteGenerator';
 
 function Home() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [notes, setNotes] = useState<string>('');
+  const { isLoading, notes, generateNotes } = useNoteGenerator();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -28,23 +29,7 @@ function Home() {
   }
 
   const handleGenerateNotes = async (url: string, language: string, style: string) => {
-    if (!isAuthenticated) {
-      toast.error('Please login to generate notes');
-      return;
-    }
-    setIsLoading(true);
-    setNotes('');
-    try {
-      const response = await generateNotes(url, language, style);
-      setNotes(response.notes);
-      toast.success('Notes generated successfully!');
-    } catch (error: any) {
-      console.error('Error generating notes:', error);
-      const errorMessage = error.response?.data?.detail || 'Failed to generate notes. Please try again.';
-      toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
+    await generateNotes(url, language, style);
   };
 
   return (
@@ -99,6 +84,12 @@ function Navigation() {
             GitHub
           </a>
 
+          {isAuthenticated && (
+            <Link to="/dashboard" className={`text-sm font-medium transition-colors ${isActive('/dashboard')}`}>
+              My Notes
+            </Link>
+          )}
+
           <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-2"></div>
 
           {isAuthenticated ? (
@@ -138,6 +129,8 @@ function App() {
         <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 w-full">
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/notes/:id" element={<NoteView />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/features" element={<Features />} />
             <Route path="/login" element={<Login />} />
