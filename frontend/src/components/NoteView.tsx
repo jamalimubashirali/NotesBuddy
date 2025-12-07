@@ -5,7 +5,7 @@ import type { NoteResponse } from '../services/api';
 import { ArrowLeft, Download, Calendar, Globe, FileText } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'react-hot-toast';
-import ChatInterface from './ChatInterface';
+import ChatModal from './ChatModal';
 
 const NoteView: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -97,9 +97,8 @@ const NoteView: React.FC = () => {
                 </div>
             </div>
 
-            <div className="mt-8">
-                <ChatInterface noteId={note.id} />
-            </div>
+            {/* Floating Chat Modal */}
+            <ChatModal noteId={note.id} />
         </div>
     );
 };

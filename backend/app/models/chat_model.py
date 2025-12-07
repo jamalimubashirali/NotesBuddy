@@ -14,6 +14,6 @@ class ChatMessage(Base):
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
-    # Relationships
-    note = relationship("Notes", back_populates="chat_messages")
-    user = relationship("User", back_populates="chat_messages")
+    # Relationships (one-way since Notes and User don't need reverse)
+    note = relationship("Notes")
+    user = relationship("User")

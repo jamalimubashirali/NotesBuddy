@@ -118,6 +118,26 @@ async def get_note(
         raise HTTPException(status_code=404, detail="Note not found")
     return note
 
+@router.get("/{note_id}/chat/history")
+async def get_chat_history(
+    note_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get chat history for a specific note."""
+    from app.models.chat_model import ChatMessage
+    
+    note = db.query(Notes).filter(Notes.id == note_id, Notes.user_id == current_user.id).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    
+    messages = db.query(ChatMessage).filter(
+        ChatMessage.note_id == note_id,
+        ChatMessage.user_id == current_user.id
+    ).order_by(ChatMessage.created_at).all()
+    
+    return [{"role": msg.role, "content": msg.content, "created_at": msg.created_at} for msg in messages]
+
 @router.post("/{note_id}/chat")
 async def chat_with_note(
     note_id: int,
@@ -126,11 +146,79 @@ async def chat_with_note(
     current_user: User = Depends(get_current_user)
 ):
     """Chat with a specific note."""
+    from app.models.chat_model import ChatMessage
+    from app.models.token_usage_model import TokenUsage
+    from datetime import date
+    from app.core.config import settings
+    
     note = db.query(Notes).filter(Notes.id == note_id, Notes.user_id == current_user.id).first()
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
-        
+    
+    # Check daily token limit
+    today = date.today()
+    usage = db.query(TokenUsage).filter(
+        TokenUsage.user_id == current_user.id,
+        TokenUsage.date == today
+    ).first()
+    
+    if usage and usage.tokens_used >= settings.DAILY_TOKEN_LIMIT:
+        raise HTTPException(
+            status_code=429, 
+            detail=f"Daily token limit ({settings.DAILY_TOKEN_LIMIT}) exceeded. Try again tomorrow."
+        )
+    
+    # Estimate input tokens (rough: ~4 chars = 1 token)
+    input_tokens = len(chat_request.message) // 4
+    
+    # Save user message
+    user_message = ChatMessage(
+        note_id=note_id,
+        user_id=current_user.id,
+        role="user",
+        content=chat_request.message
+    )
+    db.add(user_message)
+    db.commit()
+    
+    # Stream response and collect full content
+    async def generate_and_save():
+        nonlocal usage  # Fix scope issue
+        full_response = ""
+        try:
+            async for chunk in llm_service.chat_with_note(note.id, note.notes, chat_request.message):
+                full_response += chunk
+                yield chunk
+            
+            # Save assistant message
+            assistant_message = ChatMessage(
+                note_id=note_id,
+                user_id=current_user.id,
+                role="assistant",
+                content=full_response
+            )
+            db.add(assistant_message)
+            
+            # Update token usage
+            output_tokens = len(full_response) // 4
+            total_tokens = input_tokens + output_tokens
+            
+            if usage:
+                usage.tokens_used += total_tokens
+            else:
+                usage = TokenUsage(
+                    user_id=current_user.id,
+                    date=today,
+                    tokens_used=total_tokens
+                )
+                db.add(usage)
+            
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            yield f"\n\nError: {str(e)}"
+    
     return StreamingResponse(
-        llm_service.chat_with_note(note.id, note.notes, chat_request.message),
+        generate_and_save(),
         media_type="text/plain"
     )

@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
+    # Token Usage Limits
+    DAILY_TOKEN_LIMIT: int = 5000  # 5k tokens per user per day (~4k words)
+    MAX_TOKENS_PER_CHAT: int = 2000  # 2k tokens per chat session
+    
     # Environment
     ENVIRONMENT: str = "development"
     DEBUG: bool = True

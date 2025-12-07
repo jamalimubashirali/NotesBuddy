@@ -1,12 +1,12 @@
-from datetime import timedelta
+from datetime import timedelta, date
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 import traceback
 from app.core.database import get_db
-from app.core.auth import create_access_token, verify_token
+from app.core.auth import create_access_token, verify_token, get_current_user
 from app.core.config import settings
-from app.models.user_pref_model import UserCreate, UserResponse, UserLogin, Token, TokenData
+from app.models.user_pref_model import UserCreate, UserResponse, UserLogin, Token, TokenData, User
 from app.services.user_service import UserService
 
 router = APIRouter()
@@ -103,3 +103,30 @@ async def verify_user_token(
     Verify if the provided token is valid.
     """
     return {"message": "Token is valid", "email": token_data.email}
+
+
+@router.get("/token-usage")
+async def get_token_usage(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get current user's token usage for today.
+    """
+    from app.models.token_usage_model import TokenUsage
+    
+    today = date.today()
+    usage = db.query(TokenUsage).filter(
+        TokenUsage.user_id == current_user.id,
+        TokenUsage.date == today
+    ).first()
+    
+    tokens_used = usage.tokens_used if usage else 0
+    tokens_remaining = settings.DAILY_TOKEN_LIMIT - tokens_used
+    
+    return {
+        "tokens_used": tokens_used,
+        "tokens_remaining": max(0, tokens_remaining),
+        "daily_limit": settings.DAILY_TOKEN_LIMIT,
+        "date": str(today)
+    }

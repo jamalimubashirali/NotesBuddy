@@ -4,6 +4,11 @@ from langchain_core.runnables import RunnableBranch, RunnablePassthrough, Runnab
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from app.core.config import settings
+from app.prompts.llm_prompts import (
+    CLASSIFICATION_PROMPT,
+    NOTE_GENERATION_PROMPT,
+    CHAT_WITH_NOTES_PROMPT
+)
 
 class LLMService:
     def __init__(self):
@@ -23,55 +28,11 @@ class LLMService:
         )
         
         # 1. Classification Chain
-        classifier_prompt = ChatPromptTemplate.from_template(
-            """
-            Analyze the following transcript. Is it educational, academic, or technically informative?
-            
-            CRITERIA FOR "NON_ACADEMIC":
-            - Music videos / Song lyrics
-            - Gaming / Let's Play
-            - Vlogs / Personal stories without educational value
-            - Pranks / Comedy sketches
-            - Pure entertainment
-            
-            Answer ONLY with "YES" if it is academic/educational, or "NO" if it is non-academic.
-            
-            Transcript:
-            {transcript}
-            """
-        )
+        classifier_prompt = ChatPromptTemplate.from_template(CLASSIFICATION_PROMPT)
         classifier_chain = classifier_prompt | self.llm | StrOutputParser()
 
         # 2. Generation Chain
-        generator_prompt = ChatPromptTemplate.from_template(
-            """
-            You are an expert academic assistant. Your goal is to create comprehensive, well-structured notes from the provided video transcript.
-            
-            Transcript:
-            {transcript}
-            
-            Please generate notes in {language} language with a "{style}" style.
-            
-            If style is "detailed":
-            - Provide comprehensive explanations.
-            - Include examples if available.
-            
-            If style is "summary":
-            - Provide a concise overview.
-            - Focus on main points only.
-            
-            If style is "bullet points":
-            - Use bullet points for almost everything.
-            - Keep it structured and easy to scan.
-            
-            Structure the notes as follows:
-            # Title
-            ## Summary
-            ## Key Concepts
-            ## Detailed Notes
-            ## Conclusion
-            """
-        )
+        generator_prompt = ChatPromptTemplate.from_template(NOTE_GENERATION_PROMPT)
         generator_chain = generator_prompt | self.llm | StrOutputParser()
 
         # 3. Branching Logic
@@ -111,15 +72,7 @@ class LLMService:
             # Fallback to full note if no chunks found (first time)
             context = note_content
         
-        prompt = ChatPromptTemplate.from_template(
-            """You are a helpful assistant. You have access to the following notes:
-            
-{context}
-
-User Question: {user_message}
-
-Answer the question based on the notes provided. Be concise and specific."""
-        )
+        prompt = ChatPromptTemplate.from_template(CHAT_WITH_NOTES_PROMPT)
         
         chain = prompt | self.llm | StrOutputParser()
         

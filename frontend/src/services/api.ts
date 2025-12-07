@@ -94,3 +94,15 @@ export const chatWithNote = async (noteId: number, message: string): Promise<Rea
 
   return response.body;
 };
+
+// Chat History
+export const getChatHistory = async (noteId: number) => {
+  const response = await axios.get(`${API_URL}/notes/${noteId}/chat/history`);
+  return response.data;
+};
+
+// Token Usage
+export const getTokenUsage = async () => {
+  const response = await axios.get(`${API_URL}/auth/token-usage`);
+  return response.data;
+};
