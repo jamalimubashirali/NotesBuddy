@@ -51,7 +51,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ noteId }) => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!input.trim() || isLoading) return;
+        if (!input.trim() || isLoading || tokensRemaining === 0) return;
 
         const userMessage = input.trim();
         setInput('');
@@ -202,19 +202,37 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ noteId }) => {
                     </div>
                 )}
 
+                {/* Token Limit Warning */}
+                {tokensRemaining !== null && tokensRemaining <= 0 && (
+                    <div className="mb-3 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                        <div className="flex items-start gap-2">
+                            <div className="text-orange-600 dark:text-orange-400 text-lg">⚠️</div>
+                            <div className="flex-1">
+                                <p className="text-sm font-semibold text-orange-800 dark:text-orange-300">
+                                    Daily Token Limit Reached
+                                </p>
+                                <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">
+                                    You've used all 5,000 tokens for today. Your limit will reset tomorrow at midnight.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="flex gap-2">
                     <input
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder="Ask a question about these notes..."
-                        className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                        disabled={isLoading}
+                        placeholder={tokensRemaining === 0 ? "Token limit reached - try again tomorrow" : "Ask a question about these notes..."}
+                        className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={isLoading || tokensRemaining === 0}
                     />
                     <button
                         type="submit"
-                        disabled={isLoading || !input.trim()}
+                        disabled={isLoading || !input.trim() || tokensRemaining === 0}
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                        title={tokensRemaining === 0 ? "Daily token limit reached" : "Send message"}
                     >
                         {isLoading ? (
                             <Loader2 className="w-5 h-5 animate-spin" />
