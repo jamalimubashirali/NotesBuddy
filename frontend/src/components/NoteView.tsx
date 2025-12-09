@@ -2,8 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getNoteById, exportToPDF } from '../services/api';
 import type { NoteResponse } from '../services/api';
-import { ArrowLeft, Download, Calendar, Globe, FileText } from 'lucide-react';
+import { ArrowLeft, Download, Calendar, Globe, FileText, Sparkles } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+
 import { toast } from 'react-hot-toast';
 import ChatModal from './ChatModal';
 
@@ -92,8 +95,22 @@ const NoteView: React.FC = () => {
                     </div>
                 </div>
 
+
+                {/* AI Disclaimer */}
+                <div className="px-8 pt-6 pb-2">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-medium border border-purple-200 dark:border-purple-800">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        AI Generated Content
+                    </div>
+                </div>
+
                 <div className="p-8 prose dark:prose-invert max-w-none">
-                    <ReactMarkdown>{note.notes}</ReactMarkdown>
+                    <ReactMarkdown
+                        remarkPlugins={[remarkMath]}
+                        rehypePlugins={[rehypeKatex]}
+                    >
+                        {note.notes}
+                    </ReactMarkdown>
                 </div>
             </div>
 

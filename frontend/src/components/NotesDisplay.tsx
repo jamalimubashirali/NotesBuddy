@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Copy, Check, Download, FileText, File } from 'lucide-react';
-import { exportToPDF } from '../services/api';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import { Copy, Check, Download, FileText, File, AlertTriangle, MessageSquare } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { exportToPDF, getNotes } from '../services/api';
 import { toast } from 'react-hot-toast';
 
 interface NotesDisplayProps {
     notes: string;
+    isLoading?: boolean;
 }
 
-export const NotesDisplay: React.FC<NotesDisplayProps> = ({ notes }) => {
+export const NotesDisplay: React.FC<NotesDisplayProps> = ({ notes, isLoading = false }) => {
     const [copied, setCopied] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
+    const navigate = useNavigate();
     const [showExportMenu, setShowExportMenu] = useState(false);
 
     const handleCopy = () => {
@@ -52,6 +57,22 @@ export const NotesDisplay: React.FC<NotesDisplayProps> = ({ notes }) => {
         }
     };
 
+    const handleOpenInChatView = async () => {
+        try {
+            // Fetch the most recent note
+            const allNotes = await getNotes();
+            if (allNotes.length > 0) {
+                // Navigate to the most recent note
+                navigate(`/notes/${allNotes[0].id}`);
+            } else {
+                toast.error('No notes found. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error fetching notes:', error);
+            toast.error('Failed to open note. Please try again.');
+        }
+    };
+
     if (!notes) return null;
 
     return (
@@ -66,7 +87,8 @@ export const NotesDisplay: React.FC<NotesDisplayProps> = ({ notes }) => {
                         <div className="relative">
                             <button
                                 onClick={() => setShowExportMenu(!showExportMenu)}
-                                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600 transition-colors"
+                                disabled={isLoading}
+                                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <Download className="w-4 h-4" />
                                 <span className="hidden sm:inline">Export</span>
@@ -97,7 +119,8 @@ export const NotesDisplay: React.FC<NotesDisplayProps> = ({ notes }) => {
 
                         <button
                             onClick={handleCopy}
-                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                            disabled={isLoading}
+                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                             <span className="hidden sm:inline">{copied ? 'Copied!' : 'Copy'}</span>
@@ -106,8 +129,36 @@ export const NotesDisplay: React.FC<NotesDisplayProps> = ({ notes }) => {
                 </div>
                 <div className="p-8 bg-white dark:bg-gray-800">
                     <article className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-a:text-blue-600 hover:prose-a:text-blue-500">
-                        <ReactMarkdown>{notes}</ReactMarkdown>
+                        <ReactMarkdown
+                            remarkPlugins={[remarkMath]}
+                            rehypePlugins={[rehypeKatex]}
+                        >
+                            {notes}
+                        </ReactMarkdown>
                     </article>
+
+                    {/* AI Disclaimer */}
+                    {!isLoading && (
+                        <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                            <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
+                                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                                <span>This content is AI-generated and may contain errors. Please verify important information.</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Quick Action Button */}
+                    {!isLoading && (
+                        <div className="mt-6 flex justify-center">
+                            <button
+                                onClick={handleOpenInChatView}
+                                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all hover:scale-105 shadow-lg font-medium"
+                            >
+                                <MessageSquare className="w-5 h-5" />
+                                Open in Chat View
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

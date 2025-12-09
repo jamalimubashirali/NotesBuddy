@@ -16,6 +16,41 @@ from app.models.user_pref_model import User
 
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from app.models.token_usage_model import TokenUsage
+from datetime import date
+from app.core.config import settings
+
+def check_token_limit(user_id: int, db: Session):
+    today = date.today()
+    usage = db.query(TokenUsage).filter(
+        TokenUsage.user_id == user_id,
+        TokenUsage.date == today
+    ).first()
+    
+    if usage and usage.tokens_used >= settings.DAILY_TOKEN_LIMIT:
+        raise HTTPException(
+            status_code=429, 
+            detail=f"Daily token limit ({settings.DAILY_TOKEN_LIMIT}) exceeded. Try again tomorrow."
+        )
+    return usage
+
+def update_token_usage(user_id: int, tokens: int, db: Session):
+    today = date.today()
+    usage = db.query(TokenUsage).filter(
+        TokenUsage.user_id == user_id,
+        TokenUsage.date == today
+    ).first()
+    
+    if usage:
+        usage.tokens_used += tokens
+    else:
+        usage = TokenUsage(
+            user_id=user_id,
+            date=today,
+            tokens_used=tokens
+        )
+        db.add(usage)
+    db.commit()
 
 class ChatRequest(BaseModel):
     message: str
@@ -40,20 +75,46 @@ async def generate_notes(
     ).first()
     
     if existing_note:
-        # If exists, we can't stream it easily in the same format as generation
-        # So we'll just return it as a JSON response, but frontend needs to handle this.
-        # Ideally, we should stream the existing content too for consistency, or handle it in frontend.
-        # For now, let's return a JSON response and let frontend check content-type.
-        return existing_note
+        # Stream the existing content to match the generation behavior
+        async def stream_existing():
+            content = existing_note.notes
+            chunk_size = 1024
+            for i in range(0, len(content), chunk_size):
+                yield content[i:i + chunk_size]
+        
+        return StreamingResponse(stream_existing(), media_type="text/plain")
 
-    # 2. Get Transcript
+    # 2. Check Token Limit
+    check_token_limit(current_user.id, db)
+
+    # 3. Get Transcript
     try:
         # Pass language preference to YouTube service
         transcript = YouTubeService.get_transcript(video_id, language=request.language)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to fetch transcript: {str(e)}")
     
-    # 3. Generate Notes (Streaming)
+    # Estimate input tokens (rough approximation)
+    input_tokens = len(transcript) // 4
+
+    # 4. Validate Content (Check if academic)
+    try:
+        is_academic = await llm_service.classify_content(transcript)
+        if not is_academic:
+            raise HTTPException(
+                status_code=400, 
+                detail="The video content does not appear to be academic or educational. Please try a different video."
+            )
+    except Exception as e:
+        # If classification fails (e.g. API error), we might want to fail open or closed.
+        # For now, if it's the HTTPException we just raised, re-raise it.
+        if isinstance(e, HTTPException):
+            raise e
+        # Otherwise log and proceed (or fail)? Let's fail safe.
+        print(f"Classification error: {e}")
+        # Optional: raise HTTPException(status_code=500, detail="Error validating content")
+    
+    # 5. Generate Notes (Streaming)
     async def generate_and_save():
         full_content = ""
         try:
@@ -89,6 +150,14 @@ async def generate_notes(
                         print(f"Error storing embeddings: {vec_e}")
                 except Exception as db_e:
                     print(f"Error saving notes to DB: {db_e}")
+                    
+                    # Update token usage
+                    output_tokens = len(full_content) // 4
+                    total_tokens = input_tokens + output_tokens
+                    try:
+                        update_token_usage(current_user.id, total_tokens, db)
+                    except Exception as token_e:
+                        print(f"Error updating token usage: {token_e}")
                     
         except Exception as e:
             yield f"\n\nError generating notes: {str(e)}"
@@ -156,17 +225,7 @@ async def chat_with_note(
         raise HTTPException(status_code=404, detail="Note not found")
     
     # Check daily token limit
-    today = date.today()
-    usage = db.query(TokenUsage).filter(
-        TokenUsage.user_id == current_user.id,
-        TokenUsage.date == today
-    ).first()
-    
-    if usage and usage.tokens_used >= settings.DAILY_TOKEN_LIMIT:
-        raise HTTPException(
-            status_code=429, 
-            detail=f"Daily token limit ({settings.DAILY_TOKEN_LIMIT}) exceeded. Try again tomorrow."
-        )
+    check_token_limit(current_user.id, db)
     
     # Estimate input tokens (rough: ~4 chars = 1 token)
     input_tokens = len(chat_request.message) // 4
@@ -183,7 +242,7 @@ async def chat_with_note(
     
     # Stream response and collect full content
     async def generate_and_save():
-        nonlocal usage  # Fix scope issue
+        # nonlocal usage  # No longer needed
         full_response = ""
         try:
             async for chunk in llm_service.chat_with_note(note.id, note.notes, chat_request.message):
@@ -203,17 +262,7 @@ async def chat_with_note(
             output_tokens = len(full_response) // 4
             total_tokens = input_tokens + output_tokens
             
-            if usage:
-                usage.tokens_used += total_tokens
-            else:
-                usage = TokenUsage(
-                    user_id=current_user.id,
-                    date=today,
-                    tokens_used=total_tokens
-                )
-                db.add(usage)
-            
-            db.commit()
+            update_token_usage(current_user.id, total_tokens, db)
         except Exception as e:
             db.rollback()
             yield f"\n\nError: {str(e)}"

@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     DAILY_TOKEN_LIMIT: int = 5000  # 5k tokens per user per day (~4k words)
     MAX_TOKENS_PER_CHAT: int = 2000  # 2k tokens per chat session
     
+    # Request Management
+    MAX_CONCURRENT_REQUESTS: int = 5  # Max concurrent AI requests
+    
+    # CORS
+    BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    
     # Environment
     ENVIRONMENT: str = "development"
     DEBUG: bool = True

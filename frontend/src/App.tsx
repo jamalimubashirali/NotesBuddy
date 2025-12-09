@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import 'katex/dist/katex.min.css';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { InputSection } from './components/InputSection';
 import { NotesDisplay } from './components/NotesDisplay';
@@ -7,7 +8,7 @@ import { Features } from './pages/Features';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
 import { Toaster } from 'react-hot-toast';
-import { BookOpen, Github, LogIn, UserPlus, LogOut } from 'lucide-react';
+import { BookOpen, Github, LogIn, UserPlus, LogOut, Menu, X } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Dashboard from './components/Dashboard';
 import NoteView from './components/NoteView';
@@ -52,7 +53,7 @@ function Home() {
 
       <InputSection onSubmit={handleGenerateNotes} isLoading={isLoading} />
 
-      <NotesDisplay notes={notes} />
+      <NotesDisplay notes={notes} isLoading={isLoading} />
     </>
   );
 }
@@ -60,6 +61,7 @@ function Home() {
 function Navigation() {
   const location = useLocation();
   const { isAuthenticated, logout } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const isActive = (path: string) => {
     return location.pathname === path ? "text-blue-600 dark:text-blue-400" : "text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400";
@@ -113,8 +115,95 @@ function Navigation() {
             </div>
           )}
         </nav>
+
+
+        {/* Mobile Menu Button */}
+        <button
+          className="md:hidden p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        >
+          {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
       </div>
-    </header>
+
+      {/* Mobile Menu Overlay */}
+      {
+        isMobileMenuOpen && (
+          <div className="md:hidden absolute top-16 left-0 w-full bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-lg animate-in slide-in-from-top-5 duration-200">
+            <div className="flex flex-col p-4 space-y-4">
+              <Link
+                to="/how-it-works"
+                className={`text-sm font-medium px-4 py-2 rounded-lg transition-colors ${isActive('/how-it-works')}`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                How it works
+              </Link>
+              <Link
+                to="/features"
+                className={`text-sm font-medium px-4 py-2 rounded-lg transition-colors ${isActive('/features')}`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Features
+              </Link>
+              <a
+                href="https://github.com/jamalimubashirali/NotesBuddy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-medium px-4 py-2 rounded-lg text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400 transition-colors flex items-center gap-2"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <Github className="w-4 h-4" />
+                GitHub
+              </a>
+
+              {isAuthenticated && (
+                <Link
+                  to="/dashboard"
+                  className={`text-sm font-medium px-4 py-2 rounded-lg transition-colors ${isActive('/dashboard')}`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  My Notes
+                </Link>
+              )}
+
+              <div className="h-px bg-gray-200 dark:bg-gray-700 my-2"></div>
+
+              {isAuthenticated ? (
+                <button
+                  onClick={() => {
+                    logout();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors w-full text-left"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </button>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <Link
+                    to="/login"
+                    className={`text-sm font-medium px-4 py-2 rounded-lg transition-colors ${isActive('/login')} flex items-center gap-2`}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <LogIn className="w-4 h-4" />
+                    Login
+                  </Link>
+                  <Link
+                    to="/signup"
+                    className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Sign Up
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      }
+    </header >
   );
 }
 
@@ -138,7 +227,7 @@ function App() {
           </Routes>
         </main>
 
-        <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-12 mt-auto">
+        <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-5 mt-auto">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col md:flex-row justify-between items-center gap-6">
               <div className="flex items-center gap-2">

@@ -10,7 +10,11 @@ class VectorService:
     
     def __init__(self):
         # Initialize sentence transformer for embeddings
-        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        try:
+            self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        except Exception as e:
+            print(f"WARNING: Failed to load embedding model: {e}")
+            self.embedding_model = None
         
         # Initialize ChromaDB client with persistent storage
         chroma_path = os.path.join(os.path.dirname(__file__), "..", "..", "chroma_db")
@@ -36,11 +40,17 @@ class VectorService:
     
     def create_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Create embeddings for a list of texts."""
+        if not self.embedding_model:
+            return []
         embeddings = self.embedding_model.encode(texts, convert_to_numpy=True)
         return embeddings.tolist()
     
     def store_note_chunks(self, note_id: int, note_content: str) -> None:
         """Chunk a note and store it in ChromaDB with embeddings."""
+        if not self.embedding_model:
+            print("Skipping vector storage: Embedding model not loaded.")
+            return
+
         # Create or get collection for this note
         collection_name = f"note_{note_id}"
         
@@ -84,6 +94,9 @@ class VectorService:
             return []
         
         # Create query embedding
+        if not self.embedding_model:
+            return []
+            
         query_embedding = self.create_embeddings([query])[0]
         
         # Query the collection
