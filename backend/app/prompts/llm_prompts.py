@@ -281,6 +281,10 @@ STUDENT'S NOTES:
 {context}
 
 -------------------------
+CHAT HISTORY:
+{chat_history}
+
+-------------------------
 STUDENT QUESTION:
 {user_message}
 

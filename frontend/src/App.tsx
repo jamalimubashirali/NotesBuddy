@@ -15,7 +15,7 @@ import NoteView from './components/NoteView';
 import { useNoteGenerator } from './hooks/useNoteGenerator';
 
 function Home() {
-  const { isLoading, notes, generateNotes } = useNoteGenerator();
+  const { isLoading, notes, generateNotes, generatedNoteId } = useNoteGenerator();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -53,7 +53,7 @@ function Home() {
 
       <InputSection onSubmit={handleGenerateNotes} isLoading={isLoading} />
 
-      <NotesDisplay notes={notes} isLoading={isLoading} />
+      <NotesDisplay notes={notes} isLoading={isLoading} noteId={generatedNoteId} />
     </>
   );
 }

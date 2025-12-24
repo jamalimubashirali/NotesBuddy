@@ -120,7 +120,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ noteId }) => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-800/50">
+        <div className="flex flex-col h-full bg-transparent">
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {messages.length === 0 && !isLoading && (
                     <div className="text-center text-gray-500 dark:text-gray-400 mt-10">
@@ -194,7 +194,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ noteId }) => {
                 <div ref={messagesEndRef} />
             </div>
 
-            <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200 dark:border-gray-700 bg-transparent">
                 {tokensRemaining !== null && (
                     <div className="mb-2 flex items-center justify-end gap-2 text-xs text-gray-500 dark:text-gray-400">
                         <Coins className="w-4 h-4" />

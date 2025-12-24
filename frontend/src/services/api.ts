@@ -28,9 +28,20 @@ export interface NoteResponse {
   video_id: string;
   title: string;
   notes: string;
+  transcript?: string;
   language: string;
   style: string;
   created_at: string;
+}
+
+export interface NoteSummary {
+  id: number;
+  title: string;
+  video_id: string;
+  created_at: string;
+  language: string;
+  style: string;
+  notes_snippet: string;
 }
 
 export const generateNotes = async (url: string, language: string = 'en', style: string = 'detailed'): Promise<NoteResponse> => {
@@ -42,8 +53,8 @@ export const generateNotes = async (url: string, language: string = 'en', style:
   return response.data;
 };
 
-export const getNotes = async (): Promise<NoteResponse[]> => {
-  const response = await axios.get<NoteResponse[]>(`${API_URL}/notes/`);
+export const getNotes = async (): Promise<NoteSummary[]> => {
+  const response = await axios.get<NoteSummary[]>(`${API_URL}/notes/`);
   return response.data;
 };
 

@@ -46,11 +46,11 @@ const ChatModal: React.FC<ChatModalProps> = ({ noteId }) => {
             {/* Modal Overlay & Content */}
             {isOpen && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm animate-in fade-in duration-200"
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-md animate-in fade-in duration-200"
                     onClick={() => setIsOpen(false)}
                 >
                     <div
-                        className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col animate-in zoom-in-95 duration-300"
+                        className="relative bg-white/90 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col animate-in zoom-in-95 duration-300 border border-gray-200 dark:border-gray-700"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Modal Header */}

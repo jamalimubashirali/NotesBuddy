@@ -86,7 +86,7 @@ class LLMService:
                 "language": language
             })
 
-    async def chat_with_note(self, note_id: int, note_content: str, user_message: str):
+    async def chat_with_note(self, note_id: int, note_content: str, user_message: str, chat_history: list = []):
         """Chat with a note using RAG to retrieve relevant context."""
         async with self.semaphore:
             from app.services.vector_service import VectorService
@@ -103,11 +103,24 @@ class LLMService:
                 # Fallback to full note if no chunks found (first time)
                 context = note_content
             
+            # Format chat history
+            formatted_history = ""
+            for msg in chat_history:
+                role = "Student" if msg["role"] == "user" else "Assistant"
+                formatted_history += f"{role}: {msg['content']}\n"
+            
+            if not formatted_history:
+                formatted_history = "No previous history."
+
             prompt = ChatPromptTemplate.from_template(CHAT_WITH_NOTES_PROMPT)
             
             chain = prompt | self.llm | StrOutputParser()
             
-            async for chunk in chain.astream({"context": context, "user_message": user_message}):
+            async for chunk in chain.astream({
+                "context": context, 
+                "user_message": user_message,
+                "chat_history": formatted_history
+            }):
                 yield chunk
 
     async def generate_notes_stream(self, transcript: str, language: str = "en", style: str = "detailed"):

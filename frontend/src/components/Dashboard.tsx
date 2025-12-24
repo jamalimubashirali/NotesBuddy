@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { getNotes, type NoteResponse } from '../services/api';
+import { getNotes, type NoteSummary } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Plus, Calendar, Clock, ArrowRight } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
-    const [notes, setNotes] = useState<NoteResponse[]>([]);
+    const [notes, setNotes] = useState<NoteSummary[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const navigate = useNavigate();
@@ -101,7 +101,7 @@ const Dashboard: React.FC = () => {
                             </h2>
 
                             <p className="text-gray-600 dark:text-gray-400 line-clamp-3 text-sm mb-6 leading-relaxed">
-                                {note.notes.replace(/[#*`]/g, '').substring(0, 150)}...
+                                {note.notes_snippet.replace(/[#*`]/g, '')}...
                             </p>
 
                             <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700/50 mt-auto">

@@ -10,9 +10,10 @@ import { toast } from 'react-hot-toast';
 interface NotesDisplayProps {
     notes: string;
     isLoading?: boolean;
+    noteId?: number | null;
 }
 
-export const NotesDisplay: React.FC<NotesDisplayProps> = ({ notes, isLoading = false }) => {
+export const NotesDisplay: React.FC<NotesDisplayProps> = ({ notes, isLoading = false, noteId }) => {
     const [copied, setCopied] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
     const navigate = useNavigate();
@@ -58,6 +59,11 @@ export const NotesDisplay: React.FC<NotesDisplayProps> = ({ notes, isLoading = f
     };
 
     const handleOpenInChatView = async () => {
+        if (noteId) {
+            navigate(`/notes/${noteId}`);
+            return;
+        }
+
         try {
             // Fetch the most recent note
             const allNotes = await getNotes();

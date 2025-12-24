@@ -10,6 +10,7 @@ class Notes(Base):
     video_id = Column(String, nullable=False, index=True) # Removed unique=True to allow multiple notes per video (diff lang/style)
     title = Column(String, nullable=False)
     notes = Column(String, nullable=False)
+    transcript = Column(String, nullable=True)
     language = Column(String, default="en")
     style = Column(String, default="detailed")
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
@@ -42,6 +43,16 @@ class NoteResponse(BaseModel):
     video_id: str
     title: str
     notes: str
+    transcript: str | None = None
     language: str
     style: str
     created_at: datetime
+
+class NoteSummary(BaseModel):
+    id: int
+    title: str
+    video_id: str
+    created_at: datetime
+    language: str
+    style: str
+    notes_snippet: str

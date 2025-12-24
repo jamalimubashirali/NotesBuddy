@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.models.notes_model import NoteRequest, NoteResponse, Notes
+from app.models.notes_model import NoteRequest, NoteResponse, NoteSummary, Notes
 from app.services.youtube_service import YouTubeService
 from app.services.llm_service import LLMService
 from datetime import datetime
@@ -129,10 +129,16 @@ async def generate_notes(
             # After streaming is done, save to DB
             if "NON_ACADEMIC_CONTENT" not in full_content:
                 try:
+                    # Extract title from content (first line starting with #)
+                    import re
+                    title_match = re.search(r'^#\s+(.+)$', full_content, re.MULTILINE)
+                    ai_title = title_match.group(1).strip() if title_match else f"Notes for {video_id}"
+
                     new_note = Notes(
                         video_id=video_id, 
-                        title=f"Notes for {video_id}", 
+                        title=ai_title, 
                         notes=full_content,
+                        transcript=transcript,
                         language=request.language,
                         style=request.style,
                         user_id=current_user.id
@@ -148,6 +154,9 @@ async def generate_notes(
                         vector_service.store_note_chunks(new_note.id, full_content)
                     except Exception as vec_e:
                         print(f"Error storing embeddings: {vec_e}")
+                    
+                    # Send the Note ID to the client
+                    yield f"\n\n<!-- NOTE_ID: {new_note.id} -->"
                 except Exception as db_e:
                     print(f"Error saving notes to DB: {db_e}")
                     
@@ -164,15 +173,28 @@ async def generate_notes(
 
     return StreamingResponse(generate_and_save(), media_type="text/plain")
 
-@router.get("/", response_model=List[NoteResponse])
+@router.get("/", response_model=List[NoteSummary])
 async def get_user_notes(
     skip: int = 0, 
     limit: int = 100, 
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """List all notes for the current user."""
-    notes = db.query(Notes).filter(Notes.user_id == current_user.id).offset(skip).limit(limit).all()
+    """List all notes for the current user with optimized fetching."""
+    from sqlalchemy import func
+    
+    notes = db.query(
+        Notes.id,
+        Notes.title,
+        Notes.video_id,
+        Notes.created_at,
+        Notes.language,
+        Notes.style,
+        func.substr(Notes.notes, 1, 200).label('notes_snippet')
+    ).filter(
+        Notes.user_id == current_user.id
+    ).order_by(Notes.created_at.desc()).offset(skip).limit(limit).all()
+    
     return notes
 
 @router.get("/{note_id}", response_model=NoteResponse)
@@ -244,8 +266,17 @@ async def chat_with_note(
     async def generate_and_save():
         # nonlocal usage  # No longer needed
         full_response = ""
+        # Get previous chat history
+        previous_messages = db.query(ChatMessage).filter(
+            ChatMessage.note_id == note_id,
+            ChatMessage.user_id == current_user.id
+        ).order_by(ChatMessage.created_at).all()
+        
+        # Convert to list of dicts for service
+        history_list = [{"role": msg.role, "content": msg.content} for msg in previous_messages]
+
         try:
-            async for chunk in llm_service.chat_with_note(note.id, note.notes, chat_request.message):
+            async for chunk in llm_service.chat_with_note(note.id, note.notes, chat_request.message, history_list):
                 full_response += chunk
                 yield chunk
             

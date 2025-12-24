@@ -7,14 +7,19 @@ interface UseNoteGeneratorReturn {
     notes: string;
     generateNotes: (url: string, language: string, style: string) => Promise<void>;
     resetNotes: () => void;
+    generatedNoteId: number | null;
 }
 
 export const useNoteGenerator = (): UseNoteGeneratorReturn => {
     const [isLoading, setIsLoading] = useState(false);
     const [notes, setNotes] = useState<string>('');
+    const [generatedNoteId, setGeneratedNoteId] = useState<number | null>(null);
     const { isAuthenticated } = useAuth();
 
-    const resetNotes = () => setNotes('');
+    const resetNotes = () => {
+        setNotes('');
+        setGeneratedNoteId(null);
+    };
 
     const generateNotes = async (url: string, language: string, style: string) => {
         if (!isAuthenticated) {
@@ -56,7 +61,17 @@ export const useNoteGenerator = (): UseNoteGeneratorReturn => {
                 if (done) break;
 
                 const chunk = decoder.decode(value);
-                setNotes(prev => prev + chunk);
+
+                // Check for Note ID
+                const idMatch = chunk.match(/<!-- NOTE_ID: (\d+) -->/);
+                if (idMatch) {
+                    setGeneratedNoteId(parseInt(idMatch[1]));
+                    // Remove the ID comment from the visible notes
+                    const cleanChunk = chunk.replace(/<!-- NOTE_ID: \d+ -->/, '');
+                    setNotes(prev => prev + cleanChunk);
+                } else {
+                    setNotes(prev => prev + chunk);
+                }
             }
 
             toast.success('Notes generated successfully!');
@@ -68,5 +83,5 @@ export const useNoteGenerator = (): UseNoteGeneratorReturn => {
         }
     };
 
-    return { isLoading, notes, generateNotes, resetNotes };
+    return { isLoading, notes, generateNotes, resetNotes, generatedNoteId };
 };
