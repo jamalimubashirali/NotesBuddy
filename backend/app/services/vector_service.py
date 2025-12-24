@@ -45,8 +45,8 @@ class VectorService:
         embeddings = self.embedding_model.encode(texts, convert_to_numpy=True)
         return embeddings.tolist()
     
-    def store_note_chunks(self, note_id: int, note_content: str) -> None:
-        """Chunk a note and store it in ChromaDB with embeddings."""
+    def store_note_chunks(self, note_id: int, note_content: str, transcript: str = None) -> None:
+        """Chunk a note (and optional transcript) and store it in ChromaDB with embeddings."""
         if not self.embedding_model:
             print("Skipping vector storage: Embedding model not loaded.")
             return
@@ -65,18 +65,31 @@ class VectorService:
             metadata={"note_id": note_id}
         )
         
-        # Chunk the document
-        chunks = self.chunk_document(note_content)
+        # 1. Process Note Content
+        note_chunks = self.chunk_document(note_content)
+        note_embeddings = self.create_embeddings(note_chunks)
         
-        # Create embeddings
-        embeddings = self.create_embeddings(chunks)
-        
-        # Store in ChromaDB
-        collection.add(
-            embeddings=embeddings,
-            documents=chunks,
-            ids=[f"chunk_{i}" for i in range(len(chunks))]
-        )
+        # Store Note Chunks
+        if note_chunks:
+            collection.add(
+                embeddings=note_embeddings,
+                documents=note_chunks,
+                metadatas=[{"source": "note", "type": "summary"} for _ in note_chunks],
+                ids=[f"note_chunk_{i}" for i in range(len(note_chunks))]
+            )
+            
+        # 2. Process Transcript (if provided)
+        if transcript:
+            transcript_chunks = self.chunk_document(transcript)
+            transcript_embeddings = self.create_embeddings(transcript_chunks)
+            
+            if transcript_chunks:
+                collection.add(
+                    embeddings=transcript_embeddings,
+                    documents=transcript_chunks,
+                    metadatas=[{"source": "transcript", "type": "raw"} for _ in transcript_chunks],
+                    ids=[f"transcript_chunk_{i}" for i in range(len(transcript_chunks))]
+                )
     
     def retrieve_relevant_chunks(
         self, 

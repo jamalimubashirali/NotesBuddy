@@ -44,11 +44,14 @@ const Hero: React.FC<HeroProps> = ({ onSubmit, isLoading }) => {
 
                 <h1 className="hero-title text-5xl md:text-8xl font-semibold tracking-tighter text-zinc-900 dark:text-white leading-[1.1]">
                     Knowledge, <br />
-                    <span className="text-zinc-500 font-serif italic pr-2">distilled</span> from noise.
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 via-purple-500 to-indigo-500 font-serif italic pr-2 animate-gradient-x">distilled</span> from noise.
                 </h1>
 
                 <p className="hero-subtitle text-lg text-zinc-600 dark:text-zinc-400 max-w-xl mx-auto font-light leading-relaxed">
-                    Transform hours of YouTube content into succinct, academic-grade notes. Chat with your videos and extract clarity instantly.
+                    Transform hours of YouTube content into succinct, academic-grade notes.
+                    <span className="block mt-2 text-zinc-500 dark:text-zinc-500">
+                        Chat with your videos, extract clarity, and master any subject instantly.
+                    </span>
                 </p>
 
                 <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium tracking-wide uppercase">

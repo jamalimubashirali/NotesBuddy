@@ -155,7 +155,8 @@ async def generate_notes(
                         
                         vector_service = VectorService()
                         # Run in background to avoid blocking the stream completion
-                        asyncio.create_task(run_in_threadpool(vector_service.store_note_chunks, new_note.id, full_content))
+                        # Run in background to avoid blocking the stream completion
+                        asyncio.create_task(run_in_threadpool(vector_service.store_note_chunks, new_note.id, full_content, transcript))
                     except Exception as vec_e:
                         print(f"Error scheduling embeddings: {vec_e}")
                     
