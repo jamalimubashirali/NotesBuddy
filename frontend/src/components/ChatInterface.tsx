@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Loader2, Coins } from 'lucide-react';
+import { Bot, User, Loader2, Coins } from 'lucide-react';
+import { Icon } from '@iconify/react';
 import { chatWithNote, getChatHistory, getTokenUsage } from '../services/api';
 import ReactMarkdown from 'react-markdown';
 
@@ -136,18 +137,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ noteId }) => {
                         className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}
                     >
                         {msg.role === 'assistant' && (
-                            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-teal-500/20">
                                 <Bot className="w-5 h-5 text-white" />
                             </div>
                         )}
 
                         <div
-                            className={`max-w-[80%] rounded-lg p-3 ${msg.role === 'user'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 shadow-sm'
+                            className={`max-w-[85%] rounded-2xl p-4 shadow-sm ${msg.role === 'user'
+                                ? 'bg-gradient-to-r from-teal-600 to-indigo-600 text-white rounded-tr-none shadow-indigo-500/20'
+                                : 'bg-white dark:bg-zinc-800/80 text-zinc-800 dark:text-zinc-200 border border-zinc-100 dark:border-white/10 rounded-tl-none shadow-zinc-200/50 dark:shadow-none'
                                 }`}
                         >
-                            <div className={`prose ${msg.role === 'user' ? 'prose-invert' : 'dark:prose-invert'} prose-sm max-w-none`}>
+                            <div className={`prose ${msg.role === 'user' ? 'prose-invert' : 'prose-zinc dark:prose-invert'} prose-sm max-w-none leading-relaxed`}>
                                 <ReactMarkdown>{msg.content}</ReactMarkdown>
                             </div>
                         </div>
@@ -162,10 +163,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ noteId }) => {
 
                 {isLoading && streamingContent && (
                     <div className="flex gap-3 justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-teal-500/20">
                             <Bot className="w-5 h-5 text-white" />
                         </div>
-                        <div className="max-w-[80%] rounded-lg p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 shadow-sm">
+                        <div className="max-w-[85%] rounded-lg p-4 bg-white dark:bg-zinc-800/80 text-zinc-900 dark:text-white border border-zinc-100 dark:border-white/10 shadow-sm">
                             <div className="prose dark:prose-invert prose-sm max-w-none">
                                 <ReactMarkdown>{streamingContent}</ReactMarkdown>
                             </div>
@@ -179,10 +180,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ noteId }) => {
 
                 {isLoading && !streamingContent && (
                     <div className="flex gap-3 justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-teal-500/20">
                             <Bot className="w-5 h-5 text-white" />
                         </div>
-                        <div className="max-w-[80%] rounded-lg p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 shadow-sm">
+                        <div className="max-w-[85%] rounded-lg p-4 bg-white dark:bg-zinc-800/80 text-zinc-900 dark:text-white border border-zinc-100 dark:border-white/10 shadow-sm">
                             <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                                 <Loader2 className="w-4 h-4 animate-spin" />
                                 <span className="text-sm">Searching through notes...</span>
@@ -194,9 +195,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ noteId }) => {
                 <div ref={messagesEndRef} />
             </div>
 
-            <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200 dark:border-gray-700 bg-transparent">
+            <form onSubmit={handleSubmit} className="p-4 border-t border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-[#0a0a0a]">
                 {tokensRemaining !== null && (
-                    <div className="mb-2 flex items-center justify-end gap-2 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="mb-2 flex items-center justify-end gap-2 text-xs text-zinc-500 dark:text-zinc-400">
                         <Coins className="w-4 h-4" />
                         <span>{tokensRemaining.toLocaleString()} tokens remaining today</span>
                     </div>
@@ -219,25 +220,25 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ noteId }) => {
                     </div>
                 )}
 
-                <div className="flex gap-2">
+                <div className="relative">
                     <input
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder={tokensRemaining === 0 ? "Token limit reached - try again tomorrow" : "Ask a question about these notes..."}
-                        className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        placeholder={tokensRemaining === 0 ? "Token limit reached - try again tomorrow" : "Ask a question..."}
+                        className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl py-3 pl-4 pr-12 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         disabled={isLoading || tokensRemaining === 0}
                     />
                     <button
                         type="submit"
                         disabled={isLoading || !input.trim() || tokensRemaining === 0}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                        className="absolute right-2 top-2 p-1.5 bg-indigo-500 hover:bg-indigo-400 rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title={tokensRemaining === 0 ? "Daily token limit reached" : "Send message"}
                     >
                         {isLoading ? (
-                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
-                            <Send className="w-5 h-5" />
+                            <Icon icon="solar:arrow-up-linear" className="w-4 h-4" />
                         )}
                     </button>
                 </div>

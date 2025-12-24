@@ -25,58 +25,58 @@ export const Login: React.FC = () => {
     };
 
     return (
-        <div className="min-h-[80vh] flex items-center justify-center px-4">
-            <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in fade-in zoom-in duration-300">
-                <div className="p-8">
-                    <div className="text-center mb-8">
-                        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 mb-4">
-                            <LogIn className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+        <div className="flex-1 flex items-center justify-center px-4 relative z-10 py-12">
+            <div className="max-w-md w-full bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-zinc-200 dark:border-white/10 overflow-hidden animate-fade-in-up">
+                <div className="p-8 md:p-10">
+                    <div className="text-center mb-10">
+                        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-teal-50 dark:bg-teal-900/20 mb-6 border border-teal-100 dark:border-teal-500/20">
+                            <LogIn className="w-6 h-6 text-teal-600 dark:text-teal-400" />
                         </div>
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Welcome Back</h2>
-                        <p className="text-gray-500 dark:text-gray-400 mt-2">Sign in to access your notes</p>
+                        <h2 className="text-3xl font-serif font-medium text-zinc-900 dark:text-white">Welcome Back</h2>
+                        <p className="text-zinc-500 dark:text-zinc-400 mt-3 font-light">Sign in to access your knowledge base</p>
                     </div>
 
                     {error && (
-                        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-3 text-red-700 dark:text-red-400">
+                        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-3 text-red-700 dark:text-red-400 text-sm">
                             <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                            <p className="text-sm">{error}</p>
+                            <p>{error}</p>
                         </div>
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 ml-1">
                                 Email Address
                             </label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Mail className="h-5 w-5 text-gray-400" />
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <Mail className="h-5 w-5 text-zinc-400 group-focus-within:text-teal-500 transition-colors" />
                                 </div>
                                 <input
                                     type="email"
                                     required
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 transition-colors"
+                                    className="block w-full pl-11 pr-4 py-3 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 text-zinc-900 dark:text-white placeholder-zinc-400 transition-all outline-none"
                                     placeholder="you@example.com"
                                 />
                             </div>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 ml-1">
                                 Password
                             </label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Lock className="h-5 w-5 text-gray-400" />
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <Lock className="h-5 w-5 text-zinc-400 group-focus-within:text-teal-500 transition-colors" />
                                 </div>
                                 <input
                                     type="password"
                                     required
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 transition-colors"
+                                    className="block w-full pl-11 pr-4 py-3 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 text-zinc-900 dark:text-white placeholder-zinc-400 transition-all outline-none"
                                     placeholder="••••••••"
                                 />
                             </div>
@@ -85,16 +85,16 @@ export const Login: React.FC = () => {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-teal-500/20 text-sm font-medium text-white bg-zinc-900 dark:bg-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-900 dark:focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.02]"
                         >
                             {isLoading ? 'Signing in...' : 'Sign In'}
                         </button>
                     </form>
 
-                    <div className="mt-6 text-center">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <div className="mt-8 text-center">
+                        <p className="text-sm text-zinc-600 dark:text-zinc-400">
                             Don't have an account?{' '}
-                            <Link to="/signup" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
+                            <Link to="/signup" className="font-medium text-teal-600 hover:text-teal-500 dark:text-teal-400 hover:underline underline-offset-4">
                                 Sign up
                             </Link>
                         </p>

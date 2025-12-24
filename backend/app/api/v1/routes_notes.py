@@ -147,13 +147,17 @@ async def generate_notes(
                     db.commit()
                     db.refresh(new_note)
                     
-                    # Store embeddings for RAG
+                    # Store embeddings for RAG (Background Task)
                     try:
                         from app.services.vector_service import VectorService
+                        from fastapi.concurrency import run_in_threadpool
+                        import asyncio
+                        
                         vector_service = VectorService()
-                        vector_service.store_note_chunks(new_note.id, full_content)
+                        # Run in background to avoid blocking the stream completion
+                        asyncio.create_task(run_in_threadpool(vector_service.store_note_chunks, new_note.id, full_content))
                     except Exception as vec_e:
-                        print(f"Error storing embeddings: {vec_e}")
+                        print(f"Error scheduling embeddings: {vec_e}")
                     
                     # Send the Note ID to the client
                     yield f"\n\n<!-- NOTE_ID: {new_note.id} -->"
