@@ -1,10 +1,10 @@
 from datetime import timedelta, date
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 import traceback
 from app.core.database import get_db
-from app.core.auth import create_access_token, verify_token, get_current_user
+from app.core.auth import create_access_token, create_refresh_token, verify_token, get_current_user
 from app.core.config import settings
 from app.models.user_pref_model import UserCreate, UserResponse, UserLogin, Token, TokenData, User
 from app.services.user_service import UserService
@@ -39,16 +39,14 @@ async def register_user(
         )
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login")
 async def login_user(
+    response: Response,
     user_credentials: UserLogin,
     db: Session = Depends(get_db)
 ):
     """
-    Login user and return access token.
-    
-    - **email**: User's email address
-    - **password**: User's password
+    Login user and set access/refresh tokens in HttpOnly cookies.
     """
     user = UserService.authenticate_user(
         db=db, 
@@ -69,12 +67,127 @@ async def login_user(
             detail="Inactive user"
         )
     
+    # Create tokens
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
     
-    return {"access_token": access_token, "token_type": "bearer"}
+    refresh_token = create_refresh_token(
+        data={"sub": user.email}
+    )
+    
+    # Set cookies
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=settings.COOKIE_SECURE,
+        samesite=settings.COOKIE_SAMESITE,
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    )
+    
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=settings.COOKIE_SECURE,
+        samesite=settings.COOKIE_SAMESITE,
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+    )
+    
+    return {"message": "Login successful", "user": {"email": user.email, "username": user.username}}
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    """Logout user by clearing cookies."""
+    response.delete_cookie("access_token")
+    response.delete_cookie("refresh_token")
+    return {"message": "Logout successful"}
+
+
+@router.post("/refresh-token")
+async def refresh_token(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db)
+):
+    """
+    Refresh access token using refresh token cookie.
+    Also rotates the refresh token.
+    """
+    refresh_token = request.cookies.get("refresh_token")
+    
+    if not refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token missing"
+        )
+        
+    try:
+        # Verify refresh token (reuse verify_token logic or manual verification)
+        # Here we manually verify to ensure it's a refresh token
+        from jose import jwt, JWTError
+        payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        
+        if payload.get("type") != "refresh":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token type"
+            )
+            
+        email = payload.get("sub")
+        if not email:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token payload"
+            )
+            
+        # Check if user exists
+        user = UserService.get_user_by_email(db, email=email)
+        if not user:
+             raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found"
+            )
+
+        # Create new tokens
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        new_access_token = create_access_token(
+            data={"sub": email}, expires_delta=access_token_expires
+        )
+        
+        new_refresh_token = create_refresh_token(
+            data={"sub": email}
+        )
+        
+        # Set new cookies
+        response.set_cookie(
+            key="access_token",
+            value=new_access_token,
+            httponly=True,
+            secure=settings.COOKIE_SECURE,
+            samesite=settings.COOKIE_SAMESITE,
+            max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        )
+        
+        response.set_cookie(
+            key="refresh_token",
+            value=new_refresh_token,
+            httponly=True,
+            secure=settings.COOKIE_SECURE,
+            samesite=settings.COOKIE_SAMESITE,
+            max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+        )
+        
+        return {"message": "Token refreshed"}
+        
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token"
+        )
 
 
 @router.get("/me", response_model=UserResponse)

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { login as apiLogin, register as apiRegister } from '../services/api';
+import { login as apiLogin, register as apiRegister, logout as apiLogout } from '../services/api';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
 interface User {
@@ -11,7 +12,6 @@ interface User {
 
 interface AuthContextType {
     user: User | null;
-    token: string | null;
     isAuthenticated: boolean;
     login: (data: any) => Promise<void>;
     register: (data: any) => Promise<void>;
@@ -23,44 +23,41 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
-    const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const navigate = useNavigate();
 
     useEffect(() => {
-        const validateToken = async () => {
-            const storedToken = localStorage.getItem('token');
-            if (storedToken) {
-                try {
-                    const response = await fetch('http://127.0.0.1:8000/api/v1/auth/verify-token', {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${storedToken}`
-                        }
-                    });
-
-                    if (!response.ok) {
-                        throw new Error('Token invalid');
-                    }
-
-                    setToken(storedToken);
-                } catch (error) {
-                    console.error('Token validation failed:', error);
-                    localStorage.removeItem('token');
-                    setToken(null);
-                }
+        const checkAuth = async () => {
+            try {
+                // Try to get current user
+                // We use axios directly here to avoid circular dependency if we used api.ts functions that might use useAuth
+                // But api.ts functions don't use useAuth, so it's fine.
+                // However, we need to call the /me endpoint.
+                const response = await axios.get('http://127.0.0.1:8000/api/v1/auth/me');
+                setUser(response.data);
+                setIsAuthenticated(true);
+            } catch (error) {
+                // If 401, the interceptor in api.ts (which is global) will try to refresh.
+                // If refresh fails, it redirects to login.
+                // Here we just set state to unauthenticated.
+                console.log('Not authenticated');
+                setUser(null);
+                setIsAuthenticated(false);
+            } finally {
+                setIsLoading(false);
             }
-            setIsLoading(false);
         };
 
-        validateToken();
+        checkAuth();
     }, []);
 
     const login = async (data: any) => {
         try {
             const response = await apiLogin(data);
-            localStorage.setItem('token', response.access_token);
-            setToken(response.access_token);
+            // Response contains message and user object
+            setUser(response.user);
+            setIsAuthenticated(true);
             toast.success('Successfully logged in!');
             navigate('/');
         } catch (error: any) {
@@ -80,10 +77,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
-    const logout = () => {
-        localStorage.removeItem('token');
-        setToken(null);
+    const logout = async () => {
+        try {
+            await apiLogout();
+        } catch (error) {
+            console.error('Logout failed', error);
+        }
         setUser(null);
+        setIsAuthenticated(false);
         toast.success('Logged out successfully');
         navigate('/login');
     };
@@ -91,8 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return (
         <AuthContext.Provider value={{
             user,
-            token,
-            isAuthenticated: !!token,
+            isAuthenticated,
             login,
             register,
             logout,

@@ -2,22 +2,33 @@ import axios from 'axios';
 
 const API_URL = 'http://127.0.0.1:8000/api/v1';
 
-// Add interceptor to include token in requests
-axios.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// Enable cookies for all requests
+axios.defaults.withCredentials = true;
 
-// Add interceptor to handle 401 errors
+// Remove Authorization header interceptor as we use cookies now
+// axios.interceptors.request.use((config) => { ... });
+
+// Add interceptor to handle 401 errors and refresh token
 axios.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+  async (error) => {
+    const originalRequest = error.config;
+
+    // If error is 401 and we haven't tried to refresh yet
+    if (error.response && error.response.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        // Try to refresh the token
+        await axios.post(`${API_URL}/auth/refresh-token`);
+
+        // Retry the original request
+        return axios(originalRequest);
+      } catch (refreshError) {
+        // If refresh fails, redirect to login
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
     }
     return Promise.reject(error);
   }
@@ -83,20 +94,31 @@ export const register = async (data: any) => {
   return response.data;
 };
 
+export const logout = async () => {
+  const response = await axios.post(`${API_URL}/auth/logout`);
+  return response.data;
+};
+
 export const chatWithNote = async (noteId: number, message: string): Promise<ReadableStream<Uint8Array>> => {
   const response = await fetch(`${API_URL}/notes/${noteId}/chat`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('token')}`
     },
+    credentials: 'include', // Send cookies
     body: JSON.stringify({ message })
   });
 
   if (response.status === 401) {
-    localStorage.removeItem('token');
-    window.location.href = '/login';
-    throw new Error('Unauthorized');
+    // Try to refresh token if fetch fails (fetch doesn't use axios interceptors)
+    try {
+      await axios.post(`${API_URL}/auth/refresh-token`);
+      // Retry the fetch (recursive call)
+      return chatWithNote(noteId, message);
+    } catch (e) {
+      window.location.href = '/login';
+      throw new Error('Unauthorized');
+    }
   }
 
   if (!response.body) {
