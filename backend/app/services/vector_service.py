@@ -11,9 +11,12 @@ class VectorService:
     def __init__(self):
         # Initialize sentence transformer for embeddings
         try:
+            # Set a shorter timeout or handle the connection error specifically if possible, 
+            # but for now, a broad catch is safe to prevent app crash.
             self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
         except Exception as e:
-            print(f"WARNING: Failed to load embedding model: {e}")
+            print(f"WARNING: Failed to load embedding model (likely network issue): {e}")
+            print("RAG features (Chat with Notes) will be disabled for this session.")
             self.embedding_model = None
         
         # Initialize ChromaDB client with persistent storage

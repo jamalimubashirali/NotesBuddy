@@ -8,17 +8,20 @@ interface UseNoteGeneratorReturn {
     generateNotes: (url: string, language: string, style: string) => Promise<void>;
     resetNotes: () => void;
     generatedNoteId: number | null;
+    error: string | null;
 }
 
 export const useNoteGenerator = (): UseNoteGeneratorReturn => {
     const [isLoading, setIsLoading] = useState(false);
     const [notes, setNotes] = useState<string>('');
     const [generatedNoteId, setGeneratedNoteId] = useState<number | null>(null);
+    const [error, setError] = useState<string | null>(null);
     const { isAuthenticated } = useAuth();
 
     const resetNotes = () => {
         setNotes('');
         setGeneratedNoteId(null);
+        setError(null);
     };
 
     const generateNotes = async (url: string, language: string, style: string) => {
@@ -28,6 +31,7 @@ export const useNoteGenerator = (): UseNoteGeneratorReturn => {
         }
         setIsLoading(true);
         setNotes('');
+        setError(null);
 
         try {
             const token = localStorage.getItem('token');
@@ -77,11 +81,13 @@ export const useNoteGenerator = (): UseNoteGeneratorReturn => {
             toast.success('Notes generated successfully!');
         } catch (error: any) {
             console.error('Error generating notes:', error);
-            toast.error(error.message || 'Failed to generate notes. Please try again.');
+            const errorMessage = error.message || 'Failed to generate notes. Please try again.';
+            setError(errorMessage);
+            toast.error(errorMessage);
         } finally {
             setIsLoading(false);
         }
     };
 
-    return { isLoading, notes, generateNotes, resetNotes, generatedNoteId };
+    return { isLoading, notes, generateNotes, resetNotes, generatedNoteId, error };
 };

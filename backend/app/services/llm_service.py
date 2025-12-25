@@ -126,14 +126,35 @@ class LLMService:
     async def generate_notes_stream(self, transcript: str, language: str = "en", style: str = "detailed"):
         self.check_transcript_length(transcript)
         
-        # 2. Generate Notes
-        async with self.semaphore:
-            async for chunk in self.generator_chain.astream({
-                "transcript": transcript,
-                "language": language,
-                "style": style
-            }):
-                yield chunk
+        # Determine if chunking is needed (e.g., > 15k chars)
+        if len(transcript) > 15000:
+            chunks = self.chunk_transcript(transcript)
+            total_chunks = len(chunks)
+            print(f"Transcript length: {len(transcript)}. Splitting into {total_chunks} chunks.")
+            
+            # Process chunks in parallel
+            tasks = [self.process_chunk(chunk, i, total_chunks, language) for i, chunk in enumerate(chunks)]
+            chunk_results = await asyncio.gather(*tasks)
+            
+            # Combine results
+            combined_text = "\n\n".join(chunk_results)
+            
+            async with self.semaphore:
+                async for chunk in self.combine_chain.astream({
+                    "combined_text": combined_text,
+                    "language": language,
+                    "style": style
+                }):
+                    yield chunk
+        else:
+            # 2. Generate Notes (Directly)
+            async with self.semaphore:
+                async for chunk in self.generator_chain.astream({
+                    "transcript": transcript,
+                    "language": language,
+                    "style": style
+                }):
+                    yield chunk
 
     async def generate_notes(self, transcript: str, language: str = "en", style: str = "detailed") -> str:
         self.check_transcript_length(transcript)

@@ -28,13 +28,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const navigate = useNavigate();
 
     useEffect(() => {
-        const storedToken = localStorage.getItem('token');
-        if (storedToken) {
-            setToken(storedToken);
-            // Optionally fetch user details here if needed
-            // For now, we'll assume if token exists, user is authenticated
-        }
-        setIsLoading(false);
+        const validateToken = async () => {
+            const storedToken = localStorage.getItem('token');
+            if (storedToken) {
+                try {
+                    const response = await fetch('http://127.0.0.1:8000/api/v1/auth/verify-token', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${storedToken}`
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Token invalid');
+                    }
+
+                    setToken(storedToken);
+                } catch (error) {
+                    console.error('Token validation failed:', error);
+                    localStorage.removeItem('token');
+                    setToken(null);
+                }
+            }
+            setIsLoading(false);
+        };
+
+        validateToken();
     }, []);
 
     const login = async (data: any) => {

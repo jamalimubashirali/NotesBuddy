@@ -9,7 +9,7 @@ import { Loader2 } from 'lucide-react';
 const GeneratingView: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { generateNotes, notes, generatedNoteId } = useNoteGenerator();
+    const { generateNotes, notes, generatedNoteId, error } = useNoteGenerator();
     const hasStartedRef = React.useRef(false);
 
     const { url, language, style } = location.state || {};
@@ -31,6 +31,16 @@ const GeneratingView: React.FC = () => {
             navigate(`/notes/${generatedNoteId}`, { replace: true });
         }
     }, [generatedNoteId, navigate]);
+
+    // Handle Error Redirect
+    useEffect(() => {
+        if (error) {
+            const timer = setTimeout(() => {
+                navigate('/', { replace: true });
+            }, 3000); // Wait 3 seconds so user can read the toast
+            return () => clearTimeout(timer);
+        }
+    }, [error, navigate]);
 
     return (
         <div className="min-h-screen pt-24 px-6 md:px-24 bg-zinc-50 dark:bg-[#050505]">

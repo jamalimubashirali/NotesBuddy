@@ -197,32 +197,29 @@ TRANSCRIPT CHUNK:
 
 -------------------------
 YOUR TASK:
-Extract deep, accurate, and structured academic notes ONLY from this chunk.
+Write EXTENSIVE, DETAILED, and COMPREHENSIVE academic notes for this specific chunk.
+Do NOT summarize. Your goal is to capture EVERYTHING of value.
 
 MANDATORY RULES:
-1. Capture:
-   - Definitions
-   - Key ideas
-   - Concept explanations
+1. **BE VERBOSE**: Explain concepts in full depth. Do not use shortcuts or brief summaries.
+2. **CAPTURE ALL DETAILS**:
+   - Definitions (verbatim if important)
+   - Key ideas and their nuances
+   - Step-by-step explanations of processes
    - Cause-effect relationships
-2. If Math appears:
-   - Convert ALL equations to LaTeX
-   - Use `$` for inline math
-   - Use `$$` for block equations, placing opening `$$`, math content, and closing `$$` each on separate lines
-3. If Programming appears:
-   - Include pseudocode or real code
-   - Explain logic clearly
-4. If examples appear:
-   - Describe them fully
-5. Do NOT:
-   - Add a main title
-   - Add a global conclusion
-6. Do NOT summarize heavily
-7. **NO META-COMMENTARY**: Do NOT mention "the speaker", "the instructor", etc. Focus on the content.
-8. Output must be in {language}
+3. **PRESERVE EXAMPLES**: If the speaker gives an example, write it down in detail.
+4. **MATH & CODE**:
+   - Convert ALL equations to LaTeX (inline `$` or block `$$`).
+   - Include ALL code blocks or pseudocode mentioned.
+5. **NO META-COMMENTARY**: Do NOT mention "the speaker", "the instructor", etc. Write strictly about the subject matter.
+6. Do NOT add a main title or global conclusion (this is just a chunk).
+7. Output must be in {language}.
 
 -------------------------
-FORMAT: Clean paragraphs with headings/subheadings where needed.
+FORMAT:
+- Use clear headings and subheadings.
+- Use bullet points for lists, but keep the text within them detailed.
+- Write in full, academic sentences.
 
 Output:
 """
@@ -232,7 +229,7 @@ Output:
 COMBINE_PROMPT = """
 You are a senior academic editor.
 
-You have received multiple high-quality note sections generated from different parts of the same lecture.
+You have received multiple EXTENSIVE note sections generated from different parts of the same lecture.
 
 -------------------------
 INPUT SECTIONS:
@@ -240,24 +237,22 @@ INPUT SECTIONS:
 
 -------------------------
 YOUR TASK:
-Merge all sections into ONE seamless, logically structured, professional academic document.
+ASSEMBLE these sections into a single, MASSIVE, and COMPREHENSIVE academic document.
+Your goal is coherence, NOT brevity. The final output must be LONG and DETAILED.
 
 MANDATORY RULES:
-1. Create a proper academic Title.
-2. Write a unified Introduction based on all content.
-3. Organize "Detailed Discussion & Key Concepts" with:
-   - Clear sequencing
-   - Logical hierarchy
-   - Merged duplicated ideas
-4. You MUST preserve:
-   - All formulas (LaTeX)
-   - All code blocks
-   - All examples
-5. Ensure smooth narrative flow like a textbook chapter.
-6. Maintain:
-   - Output language: {language}
-   - Output style: "{style}"
-7. **NO META-COMMENTARY**: Do NOT mention "the speaker", "the instructor", "the video", or "the lecture". Write strictly about the *subject matter*.
+1. **DO NOT SUMMARIZE**: You are forbidden from compressing the content. If the input text is long, your output must be equally long.
+2. **RETAIN EVERYTHING**: Keep every definition, every example, every formula, and every code block from the input sections.
+3. **SEAMLESS INTEGRATION**: Smooth out the transitions between chunks, but do not cut content to do so.
+4. **STRUCTURE**:
+   - Create a proper academic Title.
+   - Write a unified Introduction.
+   - Organize the body content logically.
+   - Write a Conclusion.
+5. **MATH & CODE**: Preserve all LaTeX and code exactly as they appear.
+6. **NO META-COMMENTARY**: Write strictly about the subject matter.
+7. Maintain Output language: {language}
+8. Maintain Output style: "{style}"
 
 -------------------------
 FINAL STRUCTURE REQUIRED:
@@ -265,6 +260,7 @@ FINAL STRUCTURE REQUIRED:
 # Title
 ## Introduction
 ## Detailed Discussion & Key Concepts
+(Include as many sub-sections as needed to cover all material in depth)
 ## Examples & Applications
 ## Conclusion
 """
