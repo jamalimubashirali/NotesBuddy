@@ -140,50 +140,70 @@ async def generate_notes(
             
             # After streaming is done, save to DB
             if "NON_ACADEMIC_CONTENT" not in full_content:
-                try:
-                    # Extract title from content (first line starting with #)
-                    import re
-                    title_match = re.search(r'^#\s+(.+)$', full_content, re.MULTILINE)
-                    ai_title = title_match.group(1).strip() if title_match else f"Notes for {video_id}"
+                max_retries = 3
+                retry_count = 0
+                note_saved = False
+                
+                while retry_count < max_retries and not note_saved:
+                    try:
+                        # Extract title from content (first line starting with #)
+                        import re
+                        title_match = re.search(r'^#\s+(.+)$', full_content, re.MULTILINE)
+                        ai_title = title_match.group(1).strip() if title_match else f"Notes for {video_id}"
 
-                    new_note = Notes(
-                        video_id=video_id, 
-                        title=ai_title, 
-                        notes=full_content,
-                        transcript=transcript,
-                        language=request.language,
-                        style=request.style,
-                        user_id=current_user.id
-                    )
-                    db.add(new_note)
-                    db.commit()
-                    db.refresh(new_note)
-                    
-                    # Store embeddings for RAG (Background Task)
-                    try:
-                        from app.services.vector_service import VectorService
-                        from fastapi.concurrency import run_in_threadpool
-                        import asyncio
+                        new_note = Notes(
+                            video_id=video_id, 
+                            title=ai_title, 
+                            notes=full_content,
+                            transcript=transcript,
+                            language=request.language,
+                            style=request.style,
+                            user_id=current_user.id
+                        )
+                        db.add(new_note)
+                        db.commit()
+                        db.refresh(new_note)
+                        note_saved = True
                         
-                        vector_service = VectorService()
-                        # Run in background to avoid blocking the stream completion
-                        # Run in background to avoid blocking the stream completion
-                        asyncio.create_task(run_in_threadpool(vector_service.store_note_chunks, new_note.id, full_content, transcript))
-                    except Exception as vec_e:
-                        print(f"Error scheduling embeddings: {vec_e}")
-                    
-                    # Send the Note ID to the client
-                    yield f"\n\n<!-- NOTE_ID: {new_note.id} -->"
-                except Exception as db_e:
-                    print(f"Error saving notes to DB: {db_e}")
-                    
-                    # Update token usage
-                    output_tokens = len(full_content) // 4
-                    total_tokens = input_tokens + output_tokens
-                    try:
-                        update_token_usage(current_user.id, total_tokens, db)
-                    except Exception as token_e:
-                        print(f"Error updating token usage: {token_e}")
+                        # Update token usage ONLY after successful save
+                        output_tokens = len(full_content) // 4
+                        total_tokens = input_tokens + output_tokens
+                        try:
+                            update_token_usage(current_user.id, total_tokens, db)
+                        except Exception as token_e:
+                            print(f"Error updating token usage (non-critical): {token_e}")
+                        
+                        # Store embeddings for RAG (Background Task)
+                        try:
+                            from app.services.vector_service import VectorService
+                            from fastapi.concurrency import run_in_threadpool
+                            import asyncio
+                            
+                            vector_service = VectorService()
+                            # Run in background to avoid blocking the stream completion
+                            asyncio.create_task(run_in_threadpool(vector_service.store_note_chunks, new_note.id, full_content, transcript))
+                        except Exception as vec_e:
+                            print(f"Error scheduling embeddings: {vec_e}")
+                        
+                        # Send the Note ID to the client
+                        yield f"\n\n<!-- NOTE_ID: {new_note.id} -->"
+                        
+                    except Exception as db_e:
+                        retry_count += 1
+                        db.rollback()  # CRITICAL: Rollback failed transaction
+                        print(f"Error saving notes to DB (attempt {retry_count}/{max_retries}): {db_e}")
+                        
+                        if retry_count < max_retries:
+                            # Wait before retry (exponential backoff)
+                            import time
+                            wait_time = 2 ** retry_count  # 2, 4, 8 seconds
+                            print(f"Retrying in {wait_time} seconds...")
+                            time.sleep(wait_time)
+                        else:
+                            # All retries failed
+                            error_msg = "Failed to save notes after multiple attempts. Please try again or contact support."
+                            yield f"\n\n<!-- ERROR: {error_msg} -->"
+                            print(f"Final error after {max_retries} attempts: {db_e}")
                     
         except Exception as e:
             yield f"\n\nError generating notes: {str(e)}"

@@ -35,6 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
     const navigate = useNavigate();
+    const initializedRef = React.useRef(false);
 
     const refreshUsageStats = useCallback(async () => {
         if (isAuthenticated) {
@@ -47,35 +48,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [isAuthenticated]);
 
+    // Initialize app - fetch auth status and usage stats before showing content
     useEffect(() => {
-        if (isAuthenticated) {
-            refreshUsageStats();
-        } else {
-            setUsageStats(null);
-        }
-    }, [isAuthenticated, refreshUsageStats]);
+        // Prevent double initialization
+        if (initializedRef.current) return;
+        initializedRef.current = true;
 
-    useEffect(() => {
-        const checkAuth = async () => {
-            console.log('[AuthContext] Starting checkAuth...');
+        const initializeApp = async () => {
             try {
-                // Checking if the User Authenticated or Not
-                console.log('[AuthContext] Calling getMe()...');
-                const userData = await getMe();
-                console.log('[AuthContext] getMe() succeeded:', userData);
-                setUser(userData);
+                // Add a timeout to prevent hanging indefinitely
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Auth check timeout')), 5000)
+                );
+
+                const userData = await Promise.race([
+                    getMe(),
+                    timeoutPromise
+                ]);
+
+                setUser(userData as any);
                 setIsAuthenticated(true);
+
+                // Fetch usage stats immediately after successful auth
+                try {
+                    const stats = await getLimits();
+                    setUsageStats(stats);
+                } catch (error) {
+                    console.error('Failed to fetch usage stats:', error);
+                    // Continue even if stats fail - don't block the app
+                }
             } catch (error) {
-                console.log('[AuthContext] getMe() failed with error:', error);
+                // Not authenticated or timed out
                 setUser(null);
                 setIsAuthenticated(false);
+                setUsageStats(null);
             } finally {
-                console.log('[AuthContext] Setting isLoading to false');
+                // Only set loading to false after ALL initial API calls complete
                 setIsLoading(false);
             }
         };
 
-        checkAuth();
+        initializeApp();
     }, []);
 
     const login = async (data: any) => {
@@ -84,6 +97,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Response contains message and user object
             setUser(response.user);
             setIsAuthenticated(true);
+
+            // Fetch usage stats after login
+            try {
+                const stats = await getLimits();
+                setUsageStats(stats);
+            } catch (error) {
+                console.error('Failed to fetch usage stats:', error);
+            }
+
             toast.success('Successfully logged in!');
             navigate('/');
         } catch (error: any) {
@@ -111,6 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         setUser(null);
         setIsAuthenticated(false);
+        setUsageStats(null);
         toast.success('Logged out successfully');
         navigate('/login');
     };

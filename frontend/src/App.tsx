@@ -12,8 +12,8 @@ import NoteView from './components/NoteView';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
 import { ProtectedRoute } from './components/ProtectedRoute';
-
 import GeneratingView from './components/GeneratingView';
+import { AppLoader } from './components/AppLoader';
 
 function Home() {
   const { isAuthenticated } = useAuth();
@@ -36,22 +36,34 @@ function Home() {
   );
 }
 
+function AppContent() {
+  const { isLoading } = useAuth();
+
+  if (isLoading) {
+    return <AppLoader />;
+  }
+
+  return (
+    <Layout>
+      <Toaster position="bottom-right" toastOptions={{ duration: 4000 }} />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/generating" element={<ProtectedRoute><GeneratingView /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/notes/:id" element={<ProtectedRoute><NoteView /></ProtectedRoute>} />
+        <Route path="/how-it-works" element={<Features />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+      </Routes>
+    </Layout>
+  );
+}
+
 function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="notesbuddy-theme">
       <AuthProvider>
-        <Layout>
-          <Toaster position="bottom-right" toastOptions={{ duration: 4000 }} />
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/generating" element={<ProtectedRoute><GeneratingView /></ProtectedRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/notes/:id" element={<ProtectedRoute><NoteView /></ProtectedRoute>} />
-            <Route path="/how-it-works" element={<Features />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-          </Routes>
-        </Layout>
+        <AppContent />
       </AuthProvider>
     </ThemeProvider>
   );

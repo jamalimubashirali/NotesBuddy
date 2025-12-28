@@ -53,7 +53,8 @@ axios.interceptors.response.use(
 
       try {
         // Try to refresh the token
-        await axios.post(`${API_URL}/auth/refresh-token`);
+        const response = await axios.post(`${API_URL}/auth/refresh-token`);
+        console.log(response.data);
         isRefreshing = false;
         refreshFailed = false; // Reset flag on success
         onRefreshed();
@@ -114,13 +115,64 @@ export interface NoteSummary {
   notes_snippet: string;
 }
 
-export const generateNotes = async (url: string, language: string = 'en', style: string = 'detailed'): Promise<NoteResponse> => {
-  const response = await axios.post<NoteResponse>(`${API_URL}/notes/generate`, {
-    url,
-    language,
-    style
+export const generateNotes = async (
+  url: string,
+  language: string = 'en',
+  style: string = 'detailed',
+  retryCount = 0
+): Promise<ReadableStream<Uint8Array>> => {
+  const response = await fetch(`${API_URL}/notes/generate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include', // Send cookies for authentication
+    body: JSON.stringify({ url, language, style })
   });
-  return response.data;
+
+  // Handle 401 with single retry
+  if (response.status === 401 && retryCount === 0) {
+    try {
+      // Wait if refresh is already in progress
+      if (isRefreshing) {
+        await new Promise<void>((resolve) => {
+          subscribeTokenRefresh(() => resolve());
+        });
+      } else {
+        // Refresh the token
+        isRefreshing = true;
+        await axios.post(`${API_URL}/auth/refresh-token`);
+        isRefreshing = false;
+        onRefreshed();
+      }
+      // Retry once with incremented counter
+      return generateNotes(url, language, style, retryCount + 1);
+    } catch (e) {
+      isRefreshing = false;
+      refreshSubscribers = [];
+      throw new Error('Unauthorized');
+    }
+  }
+
+  // Handle other HTTP errors
+  if (!response.ok) {
+    let errorMessage = 'An error occurred while generating notes';
+    try {
+      const errorData = await response.json();
+      // Extract detail message if available
+      errorMessage = errorData.detail || errorData.message || errorMessage;
+    } catch (e) {
+      // If response is not JSON, use status text
+      errorMessage = response.statusText || errorMessage;
+    }
+    throw new Error(errorMessage);
+  }
+
+  if (!response.body) {
+    throw new Error('No response body');
+  }
+
+  return response.body;
 };
 
 export const getNotes = async (): Promise<NoteSummary[]> => {
@@ -198,8 +250,14 @@ export const chatWithNote = async (
 
   // Handle other HTTP errors
   if (!response.ok) {
-    const errorText = await response.text().catch(() => 'Unknown error');
-    throw new Error(`HTTP ${response.status}: ${errorText}`);
+    let errorMessage = 'An error occurred while chatting';
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.detail || errorData.message || errorMessage;
+    } catch (e) {
+      errorMessage = response.statusText || errorMessage;
+    }
+    throw new Error(errorMessage);
   }
 
   if (!response.body) {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import { generateNotes as apiGenerateNotes } from '../services/api';
 
 interface UseNoteGeneratorReturn {
     isLoading: boolean;
@@ -34,28 +35,9 @@ export const useNoteGenerator = (): UseNoteGeneratorReturn => {
         setError(null);
 
         try {
-            const response = await fetch('http://127.0.0.1:8000/api/v1/notes/generate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include', // Use cookies
-                body: JSON.stringify({ url, language, style })
-            });
-
-            if (response.status === 401) {
-                window.location.href = '/login';
-                throw new Error('Session expired. Please login again.');
-            }
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.detail || 'Failed to generate notes');
-            }
-
-            if (!response.body) throw new Error('No response body');
-
-            const reader = response.body.getReader();
+            // Use the centralized API function from api.ts
+            const stream = await apiGenerateNotes(url, language, style);
+            const reader = stream.getReader();
             const decoder = new TextDecoder();
 
             while (true) {
@@ -82,6 +64,11 @@ export const useNoteGenerator = (): UseNoteGeneratorReturn => {
             const errorMessage = error.message || 'Failed to generate notes. Please try again.';
             setError(errorMessage);
             toast.error(errorMessage);
+
+            // If unauthorized, redirect to login
+            if (errorMessage.includes('Unauthorized')) {
+                window.location.href = '/login';
+            }
         } finally {
             setIsLoading(false);
         }
@@ -89,3 +76,4 @@ export const useNoteGenerator = (): UseNoteGeneratorReturn => {
 
     return { isLoading, notes, generateNotes, resetNotes, generatedNoteId, error };
 };
+
