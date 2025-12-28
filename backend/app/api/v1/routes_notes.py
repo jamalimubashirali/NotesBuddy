@@ -21,18 +21,24 @@ from datetime import date
 from app.core.config import settings
 
 def check_token_limit(user_id: int, db: Session):
+    """Track token usage without enforcing daily limits (MVP)."""
     today = date.today()
     usage = db.query(TokenUsage).filter(
         TokenUsage.user_id == user_id,
         TokenUsage.date == today
     ).first()
-    
-    if usage and usage.tokens_used >= settings.DAILY_TOKEN_LIMIT:
-        raise HTTPException(
-            status_code=429, 
-            detail=f"Daily token limit ({settings.DAILY_TOKEN_LIMIT}) exceeded. Try again tomorrow."
-        )
+    # No daily limit check for MVP - just track usage
     return usage
+
+def check_note_limit(user_id: int, db: Session):
+    """Check if user has reached the maximum number of notes."""
+    count = db.query(Notes).filter(Notes.user_id == user_id).count()
+    if count >= settings.MAX_NOTES_COUNT:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Note limit reached ({settings.MAX_NOTES_COUNT}). Please delete some notes to create new ones."
+        )
+    return count
 
 def update_token_usage(user_id: int, tokens: int, db: Session):
     today = date.today()
@@ -84,8 +90,14 @@ async def generate_notes(
         
         return StreamingResponse(stream_existing(), media_type="text/plain")
 
-    # 2. Check Token Limit
+    # 2. Check Limits
     check_token_limit(current_user.id, db)
+    
+    # Check Note Limit (only if not regenerating an existing note, but we already handled existing note above)
+    # Actually, we should check this before doing anything expensive if it's a new note.
+    # The existing_note check above handles the case where we are just viewing/streaming an old note.
+    # If we are here, it means we are about to generate a NEW note.
+    check_note_limit(current_user.id, db)
 
     # 3. Get Transcript
     try:
@@ -307,3 +319,26 @@ async def chat_with_note(
         generate_and_save(),
         media_type="text/plain"
     )
+
+@router.get("/limits/usage")
+async def get_usage_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get current usage statistics for the user."""
+    # Get note count
+    note_count = db.query(Notes).filter(Notes.user_id == current_user.id).count()
+    
+    # Get token usage
+    today = date.today()
+    token_usage = db.query(TokenUsage).filter(
+        TokenUsage.user_id == current_user.id,
+        TokenUsage.date == today
+    ).first()
+    
+    tokens_used = token_usage.tokens_used if token_usage else 0
+    
+    return {
+        "notes_count": note_count,
+        "max_notes": settings.MAX_NOTES_COUNT
+    }

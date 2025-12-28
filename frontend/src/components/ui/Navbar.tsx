@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom';
 
 const Navbar: React.FC = () => {
     const { theme, setTheme } = useTheme();
-    const { isAuthenticated, logout } = useAuth();
+    const { isAuthenticated, logout, usageStats } = useAuth();
 
     const toggleTheme = () => {
         setTheme(theme === 'dark' ? 'light' : 'dark');
@@ -23,10 +23,21 @@ const Navbar: React.FC = () => {
             </Link>
 
             <div className="flex items-center gap-4">
-                <div className="hidden md:flex gap-6 text-sm text-zinc-600 dark:text-zinc-400">
+                <div className="hidden md:flex gap-6 text-base font-bold text-zinc-600 dark:text-zinc-400">
                     <Link to="/how-it-works" className="hover:text-black dark:hover:text-white transition-colors">Method</Link>
                     {isAuthenticated && (
-                        <Link to="/dashboard" className="hover:text-black dark:hover:text-white transition-colors">My Notes</Link>
+                        <>
+                            <Link to="/dashboard" className="hover:text-black dark:hover:text-white transition-colors">My Notes</Link>
+                            {usageStats && (
+                                <div className="flex items-center gap-3 text-xs border-l border-zinc-200 dark:border-white/10 pl-4">
+                                    <div className="flex flex-col items-end">
+                                        <span className={usageStats.notes_count >= usageStats.max_notes ? "text-red-500 font-medium" : ""}>
+                                            Notes: {usageStats.notes_count}/{usageStats.max_notes}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
 
@@ -44,7 +55,7 @@ const Navbar: React.FC = () => {
                 {isAuthenticated ? (
                     <button
                         onClick={() => logout()}
-                        className="gradient-border-mask px-4 py-2 rounded-full text-xs font-medium text-zinc-900 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-2 group border border-zinc-200 dark:border-transparent"
+                        className="gradient-border-mask px-4 py-2 rounded-full text-base font-medium text-zinc-900 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-2 group border border-zinc-200 dark:border-transparent"
                     >
                         <span>Logout</span>
                         <LogOut className="w-4 h-4" />

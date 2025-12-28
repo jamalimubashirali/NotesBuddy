@@ -1,7 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { login as apiLogin, register as apiRegister, logout as apiLogout } from '../services/api';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { login as apiLogin, register as apiRegister, logout as apiLogout, getLimits, getMe } from '../services/api';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
 interface User {
@@ -17,6 +16,15 @@ interface AuthContextType {
     register: (data: any) => Promise<void>;
     logout: () => void;
     isLoading: boolean;
+    usageStats: UsageStats | null;
+    refreshUsageStats: () => Promise<void>;
+}
+
+interface UsageStats {
+    notes_count: number;
+    max_notes: number;
+    tokens_used: number;
+    daily_token_limit: number;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,26 +33,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [user, setUser] = useState<User | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
     const navigate = useNavigate();
+
+    const refreshUsageStats = useCallback(async () => {
+        if (isAuthenticated) {
+            try {
+                const stats = await getLimits();
+                setUsageStats(stats);
+            } catch (error) {
+                console.error('Failed to fetch usage stats:', error);
+            }
+        }
+    }, [isAuthenticated]);
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            refreshUsageStats();
+        } else {
+            setUsageStats(null);
+        }
+    }, [isAuthenticated, refreshUsageStats]);
 
     useEffect(() => {
         const checkAuth = async () => {
+            console.log('[AuthContext] Starting checkAuth...');
             try {
-                // Try to get current user
-                // We use axios directly here to avoid circular dependency if we used api.ts functions that might use useAuth
-                // But api.ts functions don't use useAuth, so it's fine.
-                // However, we need to call the /me endpoint.
-                const response = await axios.get('http://127.0.0.1:8000/api/v1/auth/me');
-                setUser(response.data);
+                // Checking if the User Authenticated or Not
+                console.log('[AuthContext] Calling getMe()...');
+                const userData = await getMe();
+                console.log('[AuthContext] getMe() succeeded:', userData);
+                setUser(userData);
                 setIsAuthenticated(true);
             } catch (error) {
-                // If 401, the interceptor in api.ts (which is global) will try to refresh.
-                // If refresh fails, it redirects to login.
-                // Here we just set state to unauthenticated.
-                console.log('Not authenticated');
+                console.log('[AuthContext] getMe() failed with error:', error);
                 setUser(null);
                 setIsAuthenticated(false);
             } finally {
+                console.log('[AuthContext] Setting isLoading to false');
                 setIsLoading(false);
             }
         };
@@ -96,7 +122,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             login,
             register,
             logout,
-            isLoading
+            isLoading,
+            usageStats,
+            refreshUsageStats
         }}>
             {children}
         </AuthContext.Provider>

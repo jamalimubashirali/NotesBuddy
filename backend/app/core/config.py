@@ -24,10 +24,13 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "your-secret-key-change-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    COOKIE_SECURE: bool = False
+    COOKIE_SAMESITE: str = "lax"
     
-    # Token Usage Limits
-    DAILY_TOKEN_LIMIT: int = 5000  # 5k tokens per user per day (~4k words)
-    MAX_TOKENS_PER_CHAT: int = 2000  # 2k tokens per chat session
+    # MVP Limits (No daily quota for simplicity)
+    MAX_TOKENS_PER_CHAT: int = 2000  # 2k tokens per chat session for all users
+    MAX_NOTES_COUNT: int = 5  # Maximum number of notes per user
     
     # Request Management
     MAX_CONCURRENT_REQUESTS: int = 5  # Max concurrent AI requests

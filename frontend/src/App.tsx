@@ -11,11 +11,12 @@ import Dashboard from './components/Dashboard';
 import NoteView from './components/NoteView';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 import GeneratingView from './components/GeneratingView';
 
 function Home() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   const handleGenerateNotes = (url: string, language: string, style: string) => {
@@ -25,10 +26,6 @@ function Home() {
     }
     navigate('/generating', { state: { url, language, style } });
   };
-
-  if (authLoading) {
-    return <div className="flex justify-center items-center h-screen bg-white dark:bg-[#050505] text-zinc-900 dark:text-white">Loading...</div>;
-  }
 
   return (
     <>
@@ -47,9 +44,9 @@ function App() {
           <Toaster position="bottom-right" toastOptions={{ duration: 4000 }} />
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/generating" element={<GeneratingView />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/notes/:id" element={<NoteView />} />
+            <Route path="/generating" element={<ProtectedRoute><GeneratingView /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/notes/:id" element={<ProtectedRoute><NoteView /></ProtectedRoute>} />
             <Route path="/how-it-works" element={<Features />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />

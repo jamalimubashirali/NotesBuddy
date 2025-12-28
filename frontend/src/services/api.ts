@@ -1,12 +1,25 @@
 import axios from 'axios';
 
-const API_URL = 'http://127.0.0.1:8000/api/v1';
+const API_URL = import.meta.env.VITE_API_URL;
 
 // Enable cookies for all requests
 axios.defaults.withCredentials = true;
 
-// Remove Authorization header interceptor as we use cookies now
-// axios.interceptors.request.use((config) => { ... });
+// Token refresh queue to prevent multiple simultaneous refresh calls
+let isRefreshing = false;
+let refreshSubscribers: Array<(error?: any) => void> = [];
+let refreshFailed = false; // Track if refresh token is invalid
+
+// Subscribe to token refresh completion
+const subscribeTokenRefresh = (callback: (error?: any) => void) => {
+  refreshSubscribers.push(callback);
+};
+
+// Notify all subscribers when refresh completes
+const onRefreshed = (error?: any) => {
+  refreshSubscribers.forEach((callback) => callback(error));
+  refreshSubscribers = [];
+};
 
 // Add interceptor to handle 401 errors and refresh token
 axios.interceptors.response.use(
@@ -15,24 +28,70 @@ axios.interceptors.response.use(
     const originalRequest = error.config;
 
     // If error is 401 and we haven't tried to refresh yet
-    if (error.response && error.response.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      // If we already know refresh token is invalid, fail immediately
+      if (refreshFailed) {
+        return Promise.reject(error);
+      }
+
       originalRequest._retry = true;
+
+      // If already refreshing, queue this request
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          subscribeTokenRefresh((error) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve(axios(originalRequest));
+            }
+          });
+        });
+      }
+
+      isRefreshing = true;
 
       try {
         // Try to refresh the token
         await axios.post(`${API_URL}/auth/refresh-token`);
-
+        isRefreshing = false;
+        refreshFailed = false; // Reset flag on success
+        onRefreshed();
         // Retry the original request
         return axios(originalRequest);
       } catch (refreshError) {
-        // If refresh fails, redirect to login
-        window.location.href = '/login';
+        isRefreshing = false;
+        refreshFailed = true; // Mark that refresh token is invalid
+        onRefreshed(refreshError); // Notify all queued requests with error
+        // Let React Router handle navigation via AuthContext
+        // Don't use window.location.href as it conflicts with React state
         return Promise.reject(refreshError);
       }
     }
     return Promise.reject(error);
   }
 );
+
+// Type definitions for auth
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface RegisterData {
+  email: string;
+  username: string;
+  password: string;
+  full_name?: string;
+}
+
+export interface AuthResponse {
+  message: string;
+  user: {
+    email: string;
+    username: string;
+  };
+}
 
 export interface NoteResponse {
   id: number;
@@ -81,16 +140,15 @@ export const exportToPDF = async (notes: string): Promise<Blob> => {
   return response.data;
 };
 
-export const login = async (data: any) => {
-  const response = await axios.post(`${API_URL}/auth/login`, {
-    email: data.email,
-    password: data.password
-  });
+export const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
+  const response = await axios.post<AuthResponse>(`${API_URL}/auth/login`, credentials);
+  // Reset refresh failure state on successful login
+  refreshFailed = false;
   return response.data;
 };
 
-export const register = async (data: any) => {
-  const response = await axios.post(`${API_URL}/auth/register`, data);
+export const register = async (data: RegisterData): Promise<AuthResponse> => {
+  const response = await axios.post<AuthResponse>(`${API_URL}/auth/register`, data);
   return response.data;
 };
 
@@ -99,7 +157,11 @@ export const logout = async () => {
   return response.data;
 };
 
-export const chatWithNote = async (noteId: number, message: string): Promise<ReadableStream<Uint8Array>> => {
+export const chatWithNote = async (
+  noteId: number,
+  message: string,
+  retryCount = 0
+): Promise<ReadableStream<Uint8Array>> => {
   const response = await fetch(`${API_URL}/notes/${noteId}/chat`, {
     method: 'POST',
     headers: {
@@ -109,16 +171,35 @@ export const chatWithNote = async (noteId: number, message: string): Promise<Rea
     body: JSON.stringify({ message })
   });
 
-  if (response.status === 401) {
-    // Try to refresh token if fetch fails (fetch doesn't use axios interceptors)
+  // Handle 401 with single retry
+  if (response.status === 401 && retryCount === 0) {
     try {
-      await axios.post(`${API_URL}/auth/refresh-token`);
-      // Retry the fetch (recursive call)
-      return chatWithNote(noteId, message);
+      // Wait if refresh is already in progress
+      if (isRefreshing) {
+        await new Promise<void>((resolve) => {
+          subscribeTokenRefresh(() => resolve());
+        });
+      } else {
+        // Refresh the token
+        isRefreshing = true;
+        await axios.post(`${API_URL}/auth/refresh-token`);
+        isRefreshing = false;
+        onRefreshed('refreshed');
+      }
+      // Retry once with incremented counter
+      return chatWithNote(noteId, message, retryCount + 1);
     } catch (e) {
-      window.location.href = '/login';
+      isRefreshing = false;
+      refreshSubscribers = [];
+      // Let React Router handle navigation via AuthContext
       throw new Error('Unauthorized');
     }
+  }
+
+  // Handle other HTTP errors
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => 'Unknown error');
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
   }
 
   if (!response.body) {
@@ -137,5 +218,15 @@ export const getChatHistory = async (noteId: number) => {
 // Token Usage
 export const getTokenUsage = async () => {
   const response = await axios.get(`${API_URL}/auth/token-usage`);
+  return response.data;
+};
+
+export const getLimits = async () => {
+  const response = await axios.get(`${API_URL}/notes/limits/usage`);
+  return response.data;
+};
+
+export const getMe = async () => {
+  const response = await axios.get(`${API_URL}/auth/me`);
   return response.data;
 };

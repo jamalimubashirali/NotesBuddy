@@ -34,18 +34,16 @@ export const useNoteGenerator = (): UseNoteGeneratorReturn => {
         setError(null);
 
         try {
-            const token = localStorage.getItem('token');
             const response = await fetch('http://127.0.0.1:8000/api/v1/notes/generate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
                 },
+                credentials: 'include', // Use cookies
                 body: JSON.stringify({ url, language, style })
             });
 
             if (response.status === 401) {
-                localStorage.removeItem('token');
                 window.location.href = '/login';
                 throw new Error('Session expired. Please login again.');
             }
