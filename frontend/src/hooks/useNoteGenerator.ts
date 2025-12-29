@@ -61,14 +61,19 @@ export const useNoteGenerator = (): UseNoteGeneratorReturn => {
             toast.success('Notes generated successfully!');
         } catch (error: any) {
             console.error('Error generating notes:', error);
-            const errorMessage = error.message || 'Failed to generate notes. Please try again.';
+
+            let errorMessage = error.message || 'Failed to generate notes. Please try again.';
+
+            // Handle specific "Video too long" error from backend
+            if (errorMessage.includes('Video is too long') || (error.response?.data?.detail && error.response.data.detail.includes('Video is too long'))) {
+                errorMessage = 'Video is too long (> 30 mins). Please use a shorter video.';
+            }
+
             setError(errorMessage);
             toast.error(errorMessage);
 
-            // If unauthorized, redirect to login
-            if (errorMessage.includes('Unauthorized')) {
-                window.location.href = '/login';
-            }
+            // Don't redirect here - let axios interceptor handle token refresh first
+            // If refresh also fails, ProtectedRoute will handle the redirect automatically
         } finally {
             setIsLoading(false);
         }
@@ -76,4 +81,3 @@ export const useNoteGenerator = (): UseNoteGeneratorReturn => {
 
     return { isLoading, notes, generateNotes, resetNotes, generatedNoteId, error };
 };
-

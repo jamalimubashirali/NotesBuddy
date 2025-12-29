@@ -53,8 +53,7 @@ axios.interceptors.response.use(
 
       try {
         // Try to refresh the token
-        const response = await axios.post(`${API_URL}/auth/refresh-token`);
-        console.log(response.data);
+        await axios.post(`${API_URL}/auth/refresh-token`);
         isRefreshing = false;
         refreshFailed = false; // Reset flag on success
         onRefreshed();

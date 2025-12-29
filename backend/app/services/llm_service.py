@@ -62,9 +62,10 @@ class LLMService:
             return "YES" in result.upper()
 
     def check_transcript_length(self, transcript: str) -> None:
-        # Approx 4 chars per token. Limit to ~30k tokens for safety
-        if len(transcript) > 120000:
-            raise ValueError("Transcript is too long (approx > 30k tokens). Please use a shorter video.")
+        # Approx 4 chars per token. Limit to ~30k chars (approx 30 mins of video)
+        # This prevents context window issues when vector service is disabled
+        if len(transcript) > 30000:
+            raise ValueError("Video is too long (approx > 30 mins). Please use a shorter video.")
 
     def chunk_transcript(self, transcript: str, chunk_size: int = 15000, overlap: int = 1000) -> list[str]:
         """Split transcript into overlapping chunks."""
@@ -89,12 +90,14 @@ class LLMService:
     async def chat_with_note(self, note_id: int, note_content: str, user_message: str, chat_history: list = []):
         """Chat with a note using RAG to retrieve relevant context."""
         async with self.semaphore:
-            from app.services.vector_service import VectorService
+            # Vector Service disabled for now as per user request
+            # from app.services.vector_service import VectorService
             
-            vector_service = VectorService()
+            # vector_service = VectorService()
             
             # Retrieve relevant chunks from the note
-            relevant_chunks = vector_service.retrieve_relevant_chunks(note_id, user_message, n_results=3)
+            # relevant_chunks = vector_service.retrieve_relevant_chunks(note_id, user_message, n_results=3)
+            relevant_chunks = []
             
             # Build context from relevant chunks
             if relevant_chunks:

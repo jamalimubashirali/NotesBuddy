@@ -129,7 +129,7 @@ async def refresh_token(
         # Verify refresh token (reuse verify_token logic or manual verification)
         # Here we manually verify to ensure it's a refresh token
         from jose import jwt, JWTError
-        payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(refresh_token, settings.REFRESH_TOKEN_SECRET_KEY, algorithms=[settings.ALGORITHM])
         
         if payload.get("type") != "refresh":
             raise HTTPException(
@@ -224,22 +224,20 @@ async def get_token_usage(
     db: Session = Depends(get_db)
 ):
     """
-    Get current user's token usage for today.
+    Get current user's total token usage (one-time limit, not daily).
     """
     from app.models.token_usage_model import TokenUsage
+    from sqlalchemy import func
     
-    today = date.today()
-    usage = db.query(TokenUsage).filter(
-        TokenUsage.user_id == current_user.id,
-        TokenUsage.date == today
-    ).first()
+    # Sum all token usage for this user across all dates
+    total_used = db.query(func.sum(TokenUsage.tokens_used)).filter(
+        TokenUsage.user_id == current_user.id
+    ).scalar() or 0
     
-    tokens_used = usage.tokens_used if usage else 0
-    tokens_remaining = settings.DAILY_TOKEN_LIMIT - tokens_used
+    tokens_remaining = settings.TOTAL_TOKEN_LIMIT - total_used
     
     return {
-        "tokens_used": tokens_used,
+        "tokens_used": total_used,
         "tokens_remaining": max(0, tokens_remaining),
-        "daily_limit": settings.DAILY_TOKEN_LIMIT,
-        "date": str(today)
+        "total_limit": settings.TOTAL_TOKEN_LIMIT,
     }

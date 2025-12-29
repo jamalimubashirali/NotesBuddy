@@ -21,14 +21,22 @@ from datetime import date
 from app.core.config import settings
 
 def check_token_limit(user_id: int, db: Session):
-    """Track token usage without enforcing daily limits (MVP)."""
-    today = date.today()
-    usage = db.query(TokenUsage).filter(
-        TokenUsage.user_id == user_id,
-        TokenUsage.date == today
-    ).first()
-    # No daily limit check for MVP - just track usage
-    return usage
+    """Check if user has exceeded their total token limit (one-time 1500 tokens)."""
+    from sqlalchemy import func
+    
+    # Sum all token usage for this user across all dates
+    total_used = db.query(func.sum(TokenUsage.tokens_used)).filter(
+        TokenUsage.user_id == user_id
+    ).scalar() or 0
+    
+    # Check if user has exceeded their total token limit
+    if total_used >= settings.TOTAL_TOKEN_LIMIT:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Token limit reached ({settings.TOTAL_TOKEN_LIMIT}). You have used all your allocated tokens."
+        )
+    
+    return total_used
 
 def check_note_limit(user_id: int, db: Session):
     """Check if user has reached the maximum number of notes."""
@@ -174,16 +182,18 @@ async def generate_notes(
                             print(f"Error updating token usage (non-critical): {token_e}")
                         
                         # Store embeddings for RAG (Background Task)
-                        try:
-                            from app.services.vector_service import VectorService
-                            from fastapi.concurrency import run_in_threadpool
-                            import asyncio
-                            
-                            vector_service = VectorService()
-                            # Run in background to avoid blocking the stream completion
-                            asyncio.create_task(run_in_threadpool(vector_service.store_note_chunks, new_note.id, full_content, transcript))
-                        except Exception as vec_e:
-                            print(f"Error scheduling embeddings: {vec_e}")
+                        # Store embeddings for RAG (Background Task)
+                        # Vector Service disabled for now as per user request
+                        # try:
+                        #     from app.services.vector_service import VectorService
+                        #     from fastapi.concurrency import run_in_threadpool
+                        #     import asyncio
+                        #     
+                        #     vector_service = VectorService()
+                        #     # Run in background to avoid blocking the stream completion
+                        #     asyncio.create_task(run_in_threadpool(vector_service.store_note_chunks, new_note.id, full_content, transcript))
+                        # except Exception as vec_e:
+                        #     print(f"Error scheduling embeddings: {vec_e}")
                         
                         # Send the Note ID to the client
                         yield f"\n\n<!-- NOTE_ID: {new_note.id} -->"

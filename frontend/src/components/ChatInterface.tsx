@@ -18,6 +18,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ noteId }) => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isHistoryLoading, setIsHistoryLoading] = useState(true);
     const [streamingContent, setStreamingContent] = useState('');
     const [tokensRemaining, setTokensRemaining] = useState<number | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -45,6 +46,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ noteId }) => {
                 setTokensRemaining(tokenData.tokens_remaining);
             } catch (error) {
                 console.error('Failed to load chat history:', error);
+            } finally {
+                setIsHistoryLoading(false);
             }
         };
         loadData();
@@ -101,7 +104,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ noteId }) => {
             if (error.response?.status === 429) {
                 const errorMessage: Message = {
                     role: 'assistant',
-                    content: '⚠️ **Daily token limit exceeded!**\n\nYou\'ve reached your daily limit of 5,000 tokens. Your limit will reset tomorrow. Thank you for using NotesBuddy!',
+                    content: '⚠️ **Total token limit reached!**\n\nYou\'ve used all your allocated tokens. Thank you for using NotesBuddy!',
                     timestamp: new Date()
                 };
                 setMessages(prev => [...prev, errorMessage]);
@@ -123,83 +126,95 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ noteId }) => {
     return (
         <div className="flex flex-col h-full bg-transparent">
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.length === 0 && !isLoading && (
-                    <div className="text-center text-gray-500 dark:text-gray-400 mt-10">
-                        <Bot className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                        <p className="text-lg font-medium">Ask me anything about these notes!</p>
-                        <p className="text-sm mt-2">I'll use AI-powered search to find relevant information</p>
+                {isHistoryLoading ? (
+                    <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-500 to-indigo-600 flex items-center justify-center mb-4 shadow-lg shadow-teal-500/20">
+                            <Loader2 className="w-6 h-6 text-white animate-spin" />
+                        </div>
+                        <p className="text-base font-medium">Loading chat history...</p>
+                        <p className="text-sm mt-1 opacity-70">Fetching previous messages</p>
                     </div>
-                )}
-
-                {messages.map((msg, idx) => (
-                    <div
-                        key={`${idx}-${msg.timestamp?.getTime()}`}
-                        className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}
-                    >
-                        {msg.role === 'assistant' && (
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-teal-500/20">
-                                <Bot className="w-5 h-5 text-white" />
+                ) : (
+                    <>
+                        {messages.length === 0 && !isLoading && (
+                            <div className="text-center text-gray-500 dark:text-gray-400 mt-10">
+                                <Bot className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                                <p className="text-lg font-medium">Ask me anything about these notes!</p>
+                                <p className="text-sm mt-2">I'll use AI-powered search to find relevant information</p>
                             </div>
                         )}
 
-                        <div
-                            className={`max-w-[85%] rounded-2xl p-4 shadow-sm ${msg.role === 'user'
-                                ? 'bg-gradient-to-r from-teal-600 to-indigo-600 text-white rounded-tr-none shadow-indigo-500/20'
-                                : 'bg-white dark:bg-zinc-800/80 text-zinc-800 dark:text-zinc-200 border border-zinc-100 dark:border-white/10 rounded-tl-none shadow-zinc-200/50 dark:shadow-none'
-                                }`}
-                        >
-                            <div className={`prose ${msg.role === 'user' ? 'prose-invert' : 'prose-zinc dark:prose-invert'} prose-sm max-w-none leading-relaxed`}>
-                                <ReactMarkdown>{msg.content}</ReactMarkdown>
-                            </div>
-                        </div>
+                        {messages.map((msg, idx) => (
+                            <div
+                                key={`${idx}-${msg.timestamp?.getTime()}`}
+                                className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}
+                            >
+                                {msg.role === 'assistant' && (
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-teal-500/20">
+                                        <Bot className="w-5 h-5 text-white" />
+                                    </div>
+                                )}
 
-                        {msg.role === 'user' && (
-                            <div className="w-8 h-8 rounded-full bg-gray-500 flex items-center justify-center flex-shrink-0">
-                                <User className="w-5 h-5 text-white" />
+                                <div
+                                    className={`max-w-[85%] rounded-2xl p-4 shadow-sm ${msg.role === 'user'
+                                        ? 'bg-gradient-to-r from-teal-600 to-indigo-600 text-white rounded-tr-none shadow-indigo-500/20'
+                                        : 'bg-white dark:bg-zinc-800/80 text-zinc-800 dark:text-zinc-200 border border-zinc-100 dark:border-white/10 rounded-tl-none shadow-zinc-200/50 dark:shadow-none'
+                                        }`}
+                                >
+                                    <div className={`prose ${msg.role === 'user' ? 'prose-invert' : 'prose-zinc dark:prose-invert'} prose-sm max-w-none leading-relaxed`}>
+                                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                                    </div>
+                                </div>
+
+                                {msg.role === 'user' && (
+                                    <div className="w-8 h-8 rounded-full bg-gray-500 flex items-center justify-center flex-shrink-0">
+                                        <User className="w-5 h-5 text-white" />
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+
+                        {isLoading && streamingContent && (
+                            <div className="flex gap-3 justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-teal-500/20">
+                                    <Bot className="w-5 h-5 text-white" />
+                                </div>
+                                <div className="max-w-[85%] rounded-lg p-4 bg-white dark:bg-zinc-800/80 text-zinc-900 dark:text-white border border-zinc-100 dark:border-white/10 shadow-sm">
+                                    <div className="prose dark:prose-invert prose-sm max-w-none">
+                                        <ReactMarkdown>{streamingContent}</ReactMarkdown>
+                                    </div>
+                                    <div className="mt-2 flex items-center gap-1 text-xs text-gray-500">
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                        <span>Thinking...</span>
+                                    </div>
+                                </div>
                             </div>
                         )}
-                    </div>
-                ))}
 
-                {isLoading && streamingContent && (
-                    <div className="flex gap-3 justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-teal-500/20">
-                            <Bot className="w-5 h-5 text-white" />
-                        </div>
-                        <div className="max-w-[85%] rounded-lg p-4 bg-white dark:bg-zinc-800/80 text-zinc-900 dark:text-white border border-zinc-100 dark:border-white/10 shadow-sm">
-                            <div className="prose dark:prose-invert prose-sm max-w-none">
-                                <ReactMarkdown>{streamingContent}</ReactMarkdown>
+                        {isLoading && !streamingContent && (
+                            <div className="flex gap-3 justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-teal-500/20">
+                                    <Bot className="w-5 h-5 text-white" />
+                                </div>
+                                <div className="max-w-[85%] rounded-lg p-4 bg-white dark:bg-zinc-800/80 text-zinc-900 dark:text-white border border-zinc-100 dark:border-white/10 shadow-sm">
+                                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <span className="text-sm">Searching through notes...</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="mt-2 flex items-center gap-1 text-xs text-gray-500">
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                                <span>Thinking...</span>
-                            </div>
-                        </div>
-                    </div>
+                        )}
+
+                        <div ref={messagesEndRef} />
+                    </>
                 )}
-
-                {isLoading && !streamingContent && (
-                    <div className="flex gap-3 justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-teal-500/20">
-                            <Bot className="w-5 h-5 text-white" />
-                        </div>
-                        <div className="max-w-[85%] rounded-lg p-4 bg-white dark:bg-zinc-800/80 text-zinc-900 dark:text-white border border-zinc-100 dark:border-white/10 shadow-sm">
-                            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                <span className="text-sm">Searching through notes...</span>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                <div ref={messagesEndRef} />
             </div>
 
             <form onSubmit={handleSubmit} className="p-4 border-t border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-[#0a0a0a]">
                 {tokensRemaining !== null && (
                     <div className="mb-2 flex items-center justify-end gap-2 text-xs text-zinc-500 dark:text-zinc-400">
                         <Coins className="w-4 h-4" />
-                        <span>{tokensRemaining.toLocaleString()} tokens remaining today</span>
+                        <span>{tokensRemaining.toLocaleString()} tokens remaining</span>
                     </div>
                 )}
 
@@ -210,10 +225,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ noteId }) => {
                             <div className="text-orange-600 dark:text-orange-400 text-lg">⚠️</div>
                             <div className="flex-1">
                                 <p className="text-sm font-semibold text-orange-800 dark:text-orange-300">
-                                    Daily Token Limit Reached
+                                    Token Limit Reached
                                 </p>
                                 <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">
-                                    You've used all 5,000 tokens for today. Your limit will reset tomorrow at midnight.
+                                    You've used all your allocated tokens.
                                 </p>
                             </div>
                         </div>
@@ -225,7 +240,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ noteId }) => {
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder={tokensRemaining === 0 ? "Token limit reached - try again tomorrow" : "Ask a question..."}
+                        placeholder={tokensRemaining === 0 ? "Token limit reached" : "Ask a question..."}
                         className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl py-3 pl-4 pr-12 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         disabled={isLoading || tokensRemaining === 0}
                     />
@@ -233,7 +248,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ noteId }) => {
                         type="submit"
                         disabled={isLoading || !input.trim() || tokensRemaining === 0}
                         className="absolute right-2 top-2 p-1.5 bg-indigo-500 hover:bg-indigo-400 rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        title={tokensRemaining === 0 ? "Daily token limit reached" : "Send message"}
+                        title={tokensRemaining === 0 ? "Token limit reached" : "Send message"}
                     >
                         {isLoading ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
