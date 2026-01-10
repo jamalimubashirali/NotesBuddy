@@ -57,6 +57,7 @@ const NoteView: React.FC = () => {
             try {
                 const data = await getNoteById(parseInt(id));
                 setNote(data);
+                document.title = `${data.title} | NotesBuddy`;
             } catch (err) {
                 setError('Failed to load note');
                 console.error(err);

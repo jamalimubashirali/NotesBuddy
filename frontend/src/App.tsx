@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import usePageMeta from './hooks/usePageMeta';
 import Layout from './components/Layout';
 import Hero from './components/Hero';
 import Features from './components/Features';
@@ -38,6 +39,7 @@ function Home() {
 
 function AppContent() {
   const { isLoading } = useAuth();
+  usePageMeta();
 
   if (isLoading) {
     return <AppLoader />;

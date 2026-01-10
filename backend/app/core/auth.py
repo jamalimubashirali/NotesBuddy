@@ -1,8 +1,8 @@
+import bcrypt
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from jose import JWTError, jwt
-# from passlib.context import CryptContext
 from fastapi import HTTPException, status, Depends
 from fastapi import HTTPException, status, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -10,11 +10,6 @@ from app.core.config import settings
 from app.models.user_pref_model import TokenData, User
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-
-import bcrypt
-
-# Password hashing
-# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # JWT token scheme
 security = HTTPBearer(auto_error=False)
