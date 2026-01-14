@@ -51,9 +51,14 @@ class Settings(BaseSettings):
     
     @property
     def DATABASE_URL(self) -> Optional[str]:
-        """Construct DATABASE_URL from individual parameters with SSL."""
+        """Construct DATABASE_URL from individual parameters."""
+        # If DATABASE_URL is explicitly set in environment, use it
+        if os.getenv("DATABASE_URL"):
+            return os.getenv("DATABASE_URL")
+            
         if all([self.user, self.password, self.host, self.port, self.dbname]):
-            return f"postgresql+psycopg2://{self.user}:{self.password}@{self.host}:{self.port}/{self.dbname}?sslmode=require"
+            ssl_mode = "require" if self.ENVIRONMENT != "local" else "disable"
+            return f"postgresql+psycopg2://{self.user}:{self.password}@{self.host}:{self.port}/{self.dbname}?sslmode={ssl_mode}"
         return None
     
     class Config:
