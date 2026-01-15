@@ -15,11 +15,25 @@ RUN apt-get update && apt-get install -y \
     zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# Install uv for faster package installation
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+
 # Copy the requirements file into the container at /app
 COPY requirements.txt .
 
-# Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# Install any needed packages specified in requirements.txt using uv
+# --system flag installs into the system python environment
+# Install any needed packages specified in requirements.txt using uv
+# --system flag installs into the system python environment
+# Increase timeout for large downloads and limit concurrency for stability
+ENV UV_HTTP_TIMEOUT=1200
+ENV UV_CONCURRENT_DOWNLOADS=5
+
+# Install CPU-only torch first to avoid downloading huge CUDA libraries
+RUN uv pip install --system --no-cache torch --index-url https://download.pytorch.org/whl/cpu
+
+# Then install the rest of the requirements
+RUN uv pip install --system --no-cache -r requirements.txt
 
 # Copy the current directory contents into the container at /app
 COPY . .
