@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
-from typing import Optional
+from pydantic import field_validator
+from typing import Optional, Union, List
 import os
 import dotenv
 
@@ -38,7 +39,16 @@ class Settings(BaseSettings):
     MAX_CONCURRENT_REQUESTS: int = os.getenv("MAX_CONCURRENT_REQUESTS")  # Max concurrent AI requests
     
     # CORS
-    BACKEND_CORS_ORIGINS: list[str] = os.getenv("BACKEND_CORS_ORIGINS")
+    BACKEND_CORS_ORIGINS: list[str] = []
+
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Union[str, list[str]]) -> list[str]:
+        if isinstance(v, str) and not v.startswith("["):
+            return [i.strip().strip("/") for i in v.split(",")]
+        elif isinstance(v, (list, str)):
+            return [i.strip().strip("/") for i in v]
+        raise ValueError(v)
     
     # Environment
     ENVIRONMENT: str = os.getenv("ENVIRONMENT")
