@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: notesbuddy-backend
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port 10000
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: notesbuddy-db
+          property: connectionString
+      - key: UVICORN_PORT
+        value: 10000
+      - key: APP_MODULE
+        value: app.main:app
+    autoDeploy: false
+
+databases:
+  - name: notesbuddy-db
+    databaseName: notesbuddy
+    user: notesbuddy_user
+    plan: free
+    region: oregon
