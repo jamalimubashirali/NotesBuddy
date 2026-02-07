@@ -59,6 +59,9 @@ class Settings(BaseSettings):
     OPENROUTER_MODEL: str = os.getenv("OPENROUTER_MODEL")
     OPENROUTER_BASE_URL: str = os.getenv("OPENROUTER_BASE_URL")
     
+    # YouTube Proxy
+    YOUTUBE_PROXY: Optional[str] = os.getenv("YOUTUBE_PROXY")
+    
     @property
     def DATABASE_URL(self) -> Optional[str]:
         """Construct DATABASE_URL from individual parameters."""

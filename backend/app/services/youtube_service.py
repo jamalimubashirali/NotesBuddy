@@ -28,8 +28,12 @@ class YouTubeService:
         """
         try:
             print(f"DEBUG: Getting transcript for {video_id} in {language}")
+            from app.core.config import settings
+            proxies = {"http": settings.YOUTUBE_PROXY, "https": settings.YOUTUBE_PROXY} if settings.YOUTUBE_PROXY else None
+            
+            print(f"DEBUG: Using proxy: {proxies}")
             ytt_api = YouTubeTranscriptApi()
-            transcript_list = ytt_api.list(video_id)
+            transcript_list = ytt_api.list(video_id, proxies=proxies)
             
             transcript = None
             
