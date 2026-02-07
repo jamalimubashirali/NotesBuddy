@@ -23,7 +23,7 @@ class UserService:
         # Create new user
         hashed_password = get_password_hash(user.password)
         db_user = User(
-            email=user.email,
+            email=user.email.lower(),
             username=user.username,
             full_name=user.full_name,
             hashed_password=hashed_password
@@ -37,7 +37,7 @@ class UserService:
     @staticmethod
     def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
         """Authenticate user with email and password."""
-        user = db.query(User).filter(User.email == email).first()
+        user = db.query(User).filter(User.email == email.lower()).first()
         if not user:
             return None
         if not verify_password(password, user.hashed_password):
@@ -47,7 +47,7 @@ class UserService:
     @staticmethod
     def get_user_by_email(db: Session, email: str) -> Optional[User]:
         """Get user by email."""
-        return db.query(User).filter(User.email == email).first()
+        return db.query(User).filter(User.email == email.lower()).first()
     
     @staticmethod
     def get_user_by_id(db: Session, user_id: int) -> Optional[User]:

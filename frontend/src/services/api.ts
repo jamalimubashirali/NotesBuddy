@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from "axios";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -28,7 +28,11 @@ axios.interceptors.response.use(
     const originalRequest = error.config;
 
     // If error is 401 and we haven't tried to refresh yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes("/auth/login")
+    ) {
       // If we already know refresh token is invalid, fail immediately
       if (refreshFailed) {
         return Promise.reject(error);
@@ -69,7 +73,7 @@ axios.interceptors.response.use(
       }
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 // Type definitions for auth
@@ -116,17 +120,17 @@ export interface NoteSummary {
 
 export const generateNotes = async (
   url: string,
-  language: string = 'en',
-  style: string = 'detailed',
-  retryCount = 0
+  language: string = "en",
+  style: string = "detailed",
+  retryCount = 0,
 ): Promise<ReadableStream<Uint8Array>> => {
   const response = await fetch(`${API_URL}/notes/generate`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
-    credentials: 'include', // Send cookies for authentication
-    body: JSON.stringify({ url, language, style })
+    credentials: "include", // Send cookies for authentication
+    body: JSON.stringify({ url, language, style }),
   });
 
   // Handle 401 with single retry
@@ -149,13 +153,13 @@ export const generateNotes = async (
     } catch (e) {
       isRefreshing = false;
       refreshSubscribers = [];
-      throw new Error('Unauthorized');
+      throw new Error("Unauthorized");
     }
   }
 
   // Handle other HTTP errors
   if (!response.ok) {
-    let errorMessage = 'An error occurred while generating notes';
+    let errorMessage = "An error occurred while generating notes";
     try {
       const errorData = await response.json();
       // Extract detail message if available
@@ -168,7 +172,7 @@ export const generateNotes = async (
   }
 
   if (!response.body) {
-    throw new Error('No response body');
+    throw new Error("No response body");
   }
 
   return response.body;
@@ -185,21 +189,33 @@ export const getNoteById = async (id: number): Promise<NoteResponse> => {
 };
 
 export const exportToPDF = async (notes: string): Promise<Blob> => {
-  const response = await axios.post(`${API_URL}/exports/export/pdf`, { notes }, {
-    responseType: 'blob'
-  });
+  const response = await axios.post(
+    `${API_URL}/exports/export/pdf`,
+    { notes },
+    {
+      responseType: "blob",
+    },
+  );
   return response.data;
 };
 
-export const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
-  const response = await axios.post<AuthResponse>(`${API_URL}/auth/login`, credentials);
+export const login = async (
+  credentials: LoginCredentials,
+): Promise<AuthResponse> => {
+  const response = await axios.post<AuthResponse>(
+    `${API_URL}/auth/login`,
+    credentials,
+  );
   // Reset refresh failure state on successful login
   refreshFailed = false;
   return response.data;
 };
 
 export const register = async (data: RegisterData): Promise<AuthResponse> => {
-  const response = await axios.post<AuthResponse>(`${API_URL}/auth/register`, data);
+  const response = await axios.post<AuthResponse>(
+    `${API_URL}/auth/register`,
+    data,
+  );
   return response.data;
 };
 
@@ -211,15 +227,15 @@ export const logout = async () => {
 export const chatWithNote = async (
   noteId: number,
   message: string,
-  retryCount = 0
+  retryCount = 0,
 ): Promise<ReadableStream<Uint8Array>> => {
   const response = await fetch(`${API_URL}/notes/${noteId}/chat`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
-    credentials: 'include', // Send cookies
-    body: JSON.stringify({ message })
+    credentials: "include", // Send cookies
+    body: JSON.stringify({ message }),
   });
 
   // Handle 401 with single retry
@@ -235,7 +251,7 @@ export const chatWithNote = async (
         isRefreshing = true;
         await axios.post(`${API_URL}/auth/refresh-token`);
         isRefreshing = false;
-        onRefreshed('refreshed');
+        onRefreshed("refreshed");
       }
       // Retry once with incremented counter
       return chatWithNote(noteId, message, retryCount + 1);
@@ -243,13 +259,13 @@ export const chatWithNote = async (
       isRefreshing = false;
       refreshSubscribers = [];
       // Let React Router handle navigation via AuthContext
-      throw new Error('Unauthorized');
+      throw new Error("Unauthorized");
     }
   }
 
   // Handle other HTTP errors
   if (!response.ok) {
-    let errorMessage = 'An error occurred while chatting';
+    let errorMessage = "An error occurred while chatting";
     try {
       const errorData = await response.json();
       errorMessage = errorData.detail || errorData.message || errorMessage;
@@ -260,7 +276,7 @@ export const chatWithNote = async (
   }
 
   if (!response.body) {
-    throw new Error('No response body');
+    throw new Error("No response body");
   }
 
   return response.body;
