@@ -32,8 +32,8 @@ class YouTubeService:
             proxies = {"http": settings.YOUTUBE_PROXY, "https": settings.YOUTUBE_PROXY} if settings.YOUTUBE_PROXY else None
             
             print(f"DEBUG: Using proxy: {proxies}")
-            ytt_api = YouTubeTranscriptApi()
-            transcript_list = ytt_api.list(video_id, proxies=proxies)
+            print(f"DEBUG: Using proxy: {proxies}")
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id, proxies=proxies)
             
             transcript = None
             
